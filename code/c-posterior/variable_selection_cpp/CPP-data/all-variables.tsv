@@ -1,0 +1,493 @@
+ALBUMIN	Albumin, amount, g/dL
+ALB_DT	Albumin, date
+ALB_DY	Albumin, day
+ALB_MO	Albumin, month
+ALB_STAT	Status of albumin results
+ALB_YR	Albumin, year
+APNCU	Prenatal care index
+APNCU1	Prenatal care: adequat, Y/N
+APNCU2	Prenatal care: interamediate, Y/N
+APNCU3	Prenatal care: intense, Y/N
+B4_AL	PS20: Behav 4yr: Level of activity
+B4_AN	PS20: Behav 4yr: Nature of activity
+B4_ATT	PS20: Behav 4yr: Duratn attention span
+B4_COM	PS20: Behav 4yr: Nature of communication
+B4_COP	PS20: Behav 4yr: Degree of cooperation
+B4_DEP	PS20: Behav 4yr: Degree of dependency
+B4_DIR	PS20: Behav 4yr: Response to directions
+B4_EMO	PS20: Behav 4yr: Emotional reactivity
+B4_GOL	PS20: Behav 4yr: Goal orientation
+B4_IRR	PS20: Behav 4yr: Irritability
+B4_PSCHL	PS20: Preschool attendance, current
+B7_AL	PS30: Behav 7yr: Level of activity
+B7_AN	PS30: Behav 7yr: Nature of activity
+B7_AST	PS30: Behav 7yr: Assertiveness
+B7_ATT	PS30: Behav 7yr: Duratn attention span
+B7_AVLA	PS30:Behav 7yr:Audit/vocal language age
+B7_AVRS	PS30: Behav 7yr: Audit/vocal raw score
+B7_AVS1	PS30: Behav 7yr: Audit/vocal score type
+B7_AVS2	PS30: Behav 7yr: Audit/vocal std score
+B7_BGTS	PS30:Behav 7yr:Bender-Gestalt tot score
+B7_BLKSS	PS30/Beh 7yr:Perform,Block Design Scaled
+B7_CODSS	PS30/Beh 7yr: Perform, Coding Scaled Sc
+B7_COM	PS30: Behav 7yr: Nature of communication
+B7_COMSS	PS30/Beh 7yr: Verbal, Comp Scaled Score
+B7_COP	PS30: Behav 7yr: Degree of cooperation
+B7_DEP	PS30: Behav 7yr: Degree of dependency
+B7_DIGSS	PS30/Beh 7yr: Verbal, Digit Scaled Score
+B7_EMO	PS30: Behav 7yr: Emotional reactivity
+B7_FR	PS30: Behav 7yr: Fearfulness
+B7_GHPR	PS30: Behav 7yr: Good/Harris %ile rank
+B7_GHRS	PS30: Behav 7yr: Good/Harris raw score
+B7_GHSS	PS30: Behav 7yr: Good/Harris std score
+B7_GOL	PS30: Behav 7yr: Goal orientation
+B7_GRADE	PS30: Behav 7yr: Current grade
+B7_HOS	PS30: Behav 7yr: Hostility
+B7_INFSS	PS30/Beh 7yr: Verbal, Info Scaled Score
+B7_PICSS	PS30/Beh 7yr: Perform, Picture Scaled Sc
+B7_RAP	PS30: Behav 7yr: Rapport with examiner
+B7_REPGR	PS30: Behav 7yr: Repeating grade
+B7_SC	PS30: Behav 7yr: Self-confidence
+B7_SEP	PS30: Behav 7yr: Separation from mom
+B7_SPCLS	PS30: Behav 7yr: Special class
+B7_TFLS	PS30:Beh 7yr:Tactile finger,left score
+B7_TFRS	PS30:Beh 7yr:Tactile finger,right score
+B7_TFTS	PS30:Beh 7yr:Tactile finger,total score
+B7_TOL	PS30: Behav 7yr: Level frustr tolerance
+B7_VOCSS	PS30/Beh 7yr: Verbal, Vocab Scaled Score
+B7_WFIQ	PS30: Behav 7yr: Full-scale IQ
+B7_WFSS	PS30: Behav 7yr:Full-scale scaled score
+B7_WISA	PS30: Behav 7yr:Intellig scale administ
+B7_WPIQ	PS30: Behav 7yr: Performance IQ
+B7_WPSS	PS30:Behav 7yr:Performance scaled score
+B7_WRAS	PS30:Beh 7yr:Wide range arithm score
+B7_WRRS	PS30:Beh 7yr:Wide range reading score
+B7_WRSS	PS30:Beh 7yr:Wide range spelling score
+B7_WVIQ	PS30: Behav 7yr: Verbal IQ
+B7_WVSS	PS30:Behav 7yr:WISC verbal scaled score
+BATCH	Batch #
+BATCH_F	Final batch assignment
+BATCH_F1	Final batch in which specimen was analyz
+BHEX_A	B-Hexachlorocyclohexane, amount, ug/L
+BHEX_LA	B-Hexachlorocyclohexane, lipid-adj, ng/g
+BHEX_S	B-Hexachlorocyclohexane, source
+BILAT	Bilateral cryptorchidism (bilund1|7=1)
+BMICAT	
+CARD	FHH-1/3: Card #
+CENT2	
+CENT3	
+CENT4	
+CENT5	
+CENT6	
+CENT7	
+CENT8	
+CENT9	
+CENT10	
+CENT11	
+CENT12	
+CENTER	Center
+CENTER_C	Center (char)
+CRYPT_L	Cryptorchidism (unilat or bilat)
+CRYPT_N	Cryptorchidism category, recoded 1/27/00
+CRYPT_R	Flag: category was recoded 1/27/00
+DCAT2	DDE serum levels: 15-29 ug/L
+DCAT3	DDE serum levels: 30-44 ug/L
+DCAT4	DDE serum levels: 45-59 ug/L
+DCAT5	DDE serum levels: >=60 ug/L
+DDE2	
+DDE3	
+DDE4	
+DDE5	
+DDECAT	DDE serum 5 levels
+DDE_A	pp DDE, amount, ug/L
+DDE_LA	pp DDE, lipid-adj amount, ng/g
+DDE_S	pp DDE, source
+DDT_A	pp DDT, amount, ug/L
+DDT_LA	pp DDT, lipid-adj amount, ng/g
+DDT_S	pp DDT, source
+DD_DIFF	Flag: diff draw dat b/t sermsubj & found
+DEATH	
+DEFECTS	Number of defects (1=single,2=multiple)
+DEGEN	
+DERAC	
+DIEL_A	Dieldrin, amount, ug/L
+DIEL_LA	Dieldrin, lipid-adj amount, ng/g
+DIEL_S	Dieldrin, source
+DRAWDT_F	FOUND: Draw date used in 98000323 set
+DRAW_DAT	SERMSUBJ: Blood draw date
+DRAW_DT	Final draw date used
+DUP	Flag: Subject had multiple dx (dup/trip)
+DUP_DEL	Flag: Dup/trip dx that was deleted
+DUP_RET	Flag: Dup/trip dx that was retained
+DUP_SO	Flag: Source of duplicate / multiple dx
+EDCAT	
+ED_MC_7	Education, mother/caregiver, child @7yrs
+ED_M_B	Education of mother at birth of child
+EVINDEX	
+EVRATIO	
+EXAMINER	PS30/Beh 7yr: Examiner (within center)
+EXPVIS	
+F1_EMPL	FHH-1: Employment status
+F1_OCCUP	FHH-3: Occupation - gravida
+F1_R1C1	FHH-1/3: Flag - revisions 0-3, card 1
+F1_R1C2	FHH-1/3: Flag - revisions 0-3, card 2
+F1_R4C1	FHH-1/3: Flag - revision 4, card 1
+F1_R4C2	FHH-1/3: Flag - revision 4, card 2
+F1_R4C3	FHH-1/3: Flag - revision 4, card 3
+FHH1_BO	FHH-1/3: birth order
+FHH9_BO	FHH9: birth order
+FH_CARD3	FHH9: pinc/pper only if w/ nat parent
+FH_CAREG	FHH9: Caregiver, with whom child lives
+FH_CGAGE	FHH9: Age of caregiver
+FH_CGEDU	FHH9: Highest educatn level of caregiver
+FH_CGINC	FHH9: Total family income for caregiver
+FH_CGLIV	FHH9: Caregiver=foster,adoptive,guardian
+FH_CGMAR	FHH9: Marital status of caregiver
+FH_CGPER	FHH9: # persons living in caregiver HH
+FH_CGRAC	FHH9: Race of caregiver
+FH_M7YR	FHH9: # moves in last 7 yrs for HH
+FH_MAST	FHH9: Additional schooling/training, mom
+FH_MCMS	"FHH9: # changes in mom""s marital status"
+FH_MEDU	FHH9: Highest education level of mother
+FH_MHRW	FHH9: # hrs/week mother worked
+FH_MHUS	"FHH9: Mother""s husband living at home?"
+FH_MMAR	FHH9: Marital status of mother
+FH_MOCC	"FHH9: Mother""s occupation"
+FH_MWRK	FHH9: Mother worked since child was born
+FH_PINC	FHH9: Parental income, last three months
+FH_PPER	FHH9: # of persons parent cared for
+FH_RESP	FHH9: Relatnship of respondent to child
+FH_SCHL	FHH9: Total # sibs, type of school
+FH_TSCV	FHH9: Total # sibs, convulsions
+FH_TSD1	FHH9: Total # sibs, dead <= 27 days
+FH_TSD2	FHH9: Total # sibs, dead 28+ days
+FH_TSFD1	FHH9: Total # sibs, fetal death <20 wks
+FH_TSFD2	FHH9: Total # sibs, fetal death 20+ wks
+FH_TSLBF	FHH9: Total # sibs, liveborn females
+FH_TSLBM	FHH9: Total # sibs, liveborn males
+FH_TSLBT	FHH9: Total # sibs, total liveborn
+FH_TSMD	FHH9: Total # sibs, motor deficit
+FH_TSMF	FHH9: Total # sibs, congenital malform
+FH_TSPM	FHH9: Total # sibs, premature births
+FH_TSR	FHH9: Total # sibs, retardation
+FH_TSRH	FHH9: Total # sibs, Rh condition
+FH_TSSD	FHH9: Total # sibs, sensory defect
+FLAG	
+GAINCAT	
+GEST	
+GESTCASE	Case for gestational-age < 37 wks: Y/N
+GESTDAY	
+GESTREG	
+GESTWK	
+GEST_DEL	Weeks gestation between LMP & delivery
+GEST_DRW	Weeks gestation between LMP & blood draw
+GEST_REG	Weeks gestation between LMP & registratn
+GNRATE	Pregnancy weight gain (<=250 g/wk)
+HEPT_A	Heptachloro Epoxide, amount, ug/L
+HEPT_LA	Heptachloro Epoxide, lipid-adj, ng/g
+HEPT_S	Heptachloro Epoxide, source
+HEXA_A	Hexachlorobenzene, amount, ug/L
+HEXA_LA	Hexachlorobenzene, lipid-adj, ng/g
+HEXA_S	Hexachlorobenzene, source
+HT	
+HTCAT	
+IDENTIFI	SERMSUBJ: Identifier #
+ID_F	FOUND: Identifier (xx-xxxxx-xx)
+IMPUTED	Total # of imputed PCB congeners
+INFHH9	Obsn in FHH-9 datafile
+INOB4	Obsn in OB-4 datafile
+INPATH1	Obsn in PATH-1 datafile
+INPED76	Obsn in PED-76 datafile
+INPED77	Obsn in PED-77 datafile
+INPS20	Obsn in PS-20 datafile
+INPS30	Obsn in PS-30 datafile
+INSEI	Obsn in SEI datafile
+INSES1	Obsn in SES-1/FHH-1/FHH-3 datafile(s)
+IN_02	obsn in 98000302.dat
+IN_03	obsn in 98000303.dat
+IN_04	obsn in 98000304.dat
+IN_05	obsn in 98000305.dat
+IN_06	obsn in 98000306.dat
+IN_07	obsn in 98000307.dat
+IN_08	obsn in 98000308.dat
+IN_09	obsn in 98000309.dat
+IN_10	obsn in 98000310.dat
+IN_11	obsn in 98000311.dat
+IN_12	obsn in 98000312.dat
+IN_13	obsn in 98000313.dat
+IN_15	obsn in 98000315.dat
+IN_16	obsn in 98000316.dat
+IN_17	obsn in 98000317.dat
+IN_18	obsn in 98000318.dat
+IN_19	obsn in 98000319.dat
+IN_20	obsn in 98000320.dat
+IN_21	obsn in 98000321.dat
+IN_22	obsn in 98000322.dat
+IN_98000	Obsn in 98000301-22 files
+IN_CRYPT	Obsn in cryptorchidism dataset
+IN_FOUND	Obsn in found_m.xls
+IN_ID	Obsn in id_file.dat
+IN_MSG23	"Obsn in list of 222 missings or N/R""s"
+IN_NR23	"Obsn in list of 98000323 N/R""s"
+IN_REPLT	Obsn in list of 20 replacements
+IN_RES23	Obsn in list of 98000323 results
+IN_SERMS	Obsn in sermsubj.sd2
+IN_SUB	Obsn in list of substitutees
+IN_XX	Obsn in 980003xx.dat
+IN_XXO	Obsn originally in 980003xx.dat
+IUGRCASE	IUGR Case - < 10 percentile BWGT: Y/N
+KG	
+MAGECAT	
+MASQ	
+MIRE_A	Mirex, amount, ug/L
+MIRE_LA	Mirex, lipid-adj amount, ng/g
+MIRE_S	Mirex, source
+MOINDEX	
+MPCB	
+MSG_CONG	Total # of PCB congeners missing
+MSG_TYPE	Type of N/R or missing in 98000301-22
+NA_BIN	Sodium, mm/L, binary
+NA_CAT	Sodium, mm/L, categorical
+NA_FLAG	FLAG: file from which Na results came
+NA_HIGH	Sodium, high level, >146 mm/L
+NA_LOW	Sodium, low level, <130 mm/L
+NA_MML	Sodium, amount, millimoles/L
+NA_PPM	Sodium, amount, ppm
+NA_STAT	Status of sample for sodium analysis
+NINDB	NINDB #
+NINDB1	
+NINDB2	
+NONA_A	trans-Nonachlor, amount, ug/L
+NONA_LA	trans-Nonachlor, lipid-adj, ng/g
+NONA_S	trans-Nonachlor, source
+OB4_BO	OB4: birth order
+OXYC_A	Oxychlordane, amount, ug/L
+OXYC_LA	Oxychlordane, lipid-adj amount, ng/g
+OXYC_S	Oxychlordane, source
+O_BL_HI	OB4: Duratn of menstr bleeding, highest
+O_BL_LO	OB4: Duratn of menstr bleeding, lowest
+O_FLOW	OB4: Amount of menstr flow
+O_MENARC	OB4: Age at menarche
+O_ODDITY	OB4: Unusual menstr features
+O_PER_HI	OB4: Length of menstr period, highest
+O_PER_LO	OB4: Length of menstr period, lowest
+P028_A	PCB 028, amount, ug/L
+P028_A1	PCB 028, amount, ug/L, possibly imputed
+P028_IMP	PCB 028, flag to indicate imputed amount
+P028_LA	PCB 028, lipid-adj amount, ng/g
+P028_M	PCB 028, flag to indicate missing amount
+P028_S	PCB 028, source
+P052_A	PCB 052, amount, ug/L
+P052_A1	PCB 052, amount, ug/L, possibly imputed
+P052_IMP	PCB 052, flag to indicate imputed amount
+P052_LA	PCB 052, lipid-adj amount, ng/g
+P052_M	PCB 052, flag to indicate missing amount
+P052_S	PCB 052, source
+P074_A	PCB 074, amount, ug/L
+P074_A1	PCB 074, amount, ug/L, possibly imputed
+P074_IMP	PCB 074, flag to indicate imputed amount
+P074_LA	PCB 074, lipid-adj amount, ng/g
+P074_M	PCB 074, flag to indicate missing amount
+P074_S	PCB 074, source
+P105_A	PCB 105, amount, ug/L
+P105_A1	PCB 105, amount, ug/L, possibly imputed
+P105_IMP	PCB 105, flag to indicate imputed amount
+P105_LA	PCB 105, lipid-adj amount, ng/g
+P105_M	PCB 105, flag to indicate missing amount
+P105_S	PCB 105, source
+P118_A	PCB 118, amount, ug/L
+P118_A1	PCB 118, amount, ug/L, possibly imputed
+P118_IMP	PCB 118, flag to indicate imputed amount
+P118_LA	PCB 118, lipid-adj amount, ng/g
+P118_M	PCB 118, flag to indicate missing amount
+P118_S	PCB 118, source
+P138_A	PCB 138, amount, ug/L
+P138_A1	PCB 138, amount, ug/L, possibly imputed
+P138_IMP	PCB 138, flag to indicate imputed amount
+P138_LA	PCB 138, lipid-adj amount, ng/g
+P138_M	PCB 138, flag to indicate missing amount
+P138_S	PCB 138, source
+P153_A	PCB 153, amount, ug/L
+P153_A1	PCB 153, amount, ug/L, possibly imputed
+P153_IMP	PCB 153, flag to indicate imputed amount
+P153_LA	PCB 153, lipid-adj amount, ng/g
+P153_M	PCB 153, flag to indicate missing amount
+P153_S	PCB 153, source
+P170_A	PCB 170, amount, ug/L
+P170_A1	PCB 170, amount, ug/L, possibly imputed
+P170_IMP	PCB 170, flag to indicate imputed amount
+P170_LA	PCB 170, lipid-adj amount, ng/g
+P170_M	PCB 170, flag to indicate missing amount
+P170_S	PCB 170, source
+P180_A	PCB 180, amount, ug/L
+P180_A1	PCB 180, amount, ug/L, possibly imputed
+P180_IMP	PCB 180, flag to indicate imputed amount
+P180_LA	PCB 180, lipid-adj amount, ng/g
+P180_M	PCB 180, flag to indicate missing amount
+P180_S	PCB 180, source
+P194_A	PCB 194, amount, ug/L
+P194_A1	PCB 194, amount, ug/L, possibly imputed
+P194_IMP	PCB 194, flag to indicate imputed amount
+P194_LA	PCB 194, lipid-adj amount, ng/g
+P194_M	PCB 194, flag to indicate missing amount
+P194_S	PCB 194, source
+P1_BO	PATH1: birth order
+P1_CALCI	PATH1: Maternal surf: Calcifications
+P1_HEMOR	PATH1: Maternal surf: Cause / hemorrhage
+P1_INFAR	PATH1: Maternal surf: Total # infarcts
+P1_NECRO	PATH1: Memb/fetal sur: Decidual necrosis
+P1_THROM	PATH1: Memb/fetal sur: Thrombosed vessel
+P203_A	PCB 203, amount, ug/L
+P203_A1	PCB 203, amount, ug/L, possibly imputed
+P203_IMP	PCB 203, flag to indicate imputed amount
+P203_LA	PCB 203, lipid-adj amount, ng/g
+P203_M	PCB 203, flag to indicate missing amount
+P203_S	PCB 203, source
+P76_HC	PED76: Head circumference (cm)
+P77_COND	PED77: Total # of conditions reported
+PARCAT	
+PCV	
+PED76_BO	PED76: birth order
+PED77_BO	PED77: birth order
+PLURAL	
+PMP_LMP	Weeks between PMP & LMP
+POOLED	Pooled specimen
+POSTERM	
+PRETERM	Preterm delivery: 0 - Yes/1 - No
+PS20_BO	PS20: birth order
+PS30_BO	PS30: birth order
+P_BATCH	Batches w/ pooled specimen w/ results
+P_MSGTYP	Batch-specific pooled type of NR/missing
+P_TLPCB	Batch-specific pooled sum(lipadjPCB,ng/g
+P_TPCB	Batch-specific pooled sum of PCBs, ug/L
+RACE2	
+RACE3	
+RACEC1	Race: Black
+RACEC2	Race: Other
+RACECAT	
+REVISION	FHH-1/3: Revision #
+SAMPLE	Sample number (xx-xxxx- + nindb)
+SBJTYPE1	Subject type (idlist,defects2,subjlist/7
+SEI_BASE	SEI: base for SEI index
+SEI_BO	SEI: birth order
+SEI_EDUC	7 YR SOCIO-ECON INDX: Education score
+SEI_INC	7 YR SOCIO-ECON INDX: Income score
+SEI_OCC	7 YR SOCIO-ECON INDX: Occupation score
+SEI_RACE	7 YR SOCIO-ECON INDX: Race
+SEI_SEI7	7 YR SOCIO-ECON INDX: 7-yr SEI
+SEQNO	Sequence # (within batch)
+SEQNO_F	Final sequence # (within batch)
+SESCAT	
+SGA	Small-for-gestational-age: 0 - Yes/1 - N
+SMKCAT	
+STATUS_F	Final status of the specimen
+ST_COVAR	ID_LIST: Subject type
+SUBJTYPE	ID_LIST: Subject type
+TOT_CHOL	Total cholesterol, ug/L
+TOT_LPCB	Sum of lipid-adj PCBs, ng/g
+TOT_PCB	Sum of PCBs, ug/L
+TRIGLYC	Triglycerides, ug/L
+UEXPVIS	
+UNILAT	Unilateral cryptorchidism (uniund1|7=1)
+V_ABRPL	VARFILE: Abruptio placenta
+V_ABRPLG	VARFILE: Abruptio placenta, grp code
+V_AGE4YR	VARFILE: Age@ 4yr psych exam
+V_AGE7YR	VARFILE: Age@ 5yr neurological exam
+V_ALC	VARFILE: OB-60 dis: hx of alcoholism
+V_AP1COL	VARFILE: 1-minute APGAR, color
+V_AP5COL	VARFILE: 5-minute APGAR, color
+V_APNEAM	VARFILE: Ped-08 dis: apnea, mult episod
+V_APNEAP	VARFILE: Ped-08 dis: apnea, primary
+V_APNEAS	VARFILE: Ped-08 dis: apnea, single epis
+V_BIRTH	VARFILE: Birth code
+V_BLENG	VARFILE: Body length @birth (cm)
+V_BLIND	VARFILE: Ped-08 dis: blindness
+V_BMIGRP	VARFILE: Maternal pre-preg BMI, categ
+V_BWGT	VARFILE: Birthweight (grams)
+V_BWGT1	VARFILE: Birthweight (grams), categ
+V_CARDIO	VARFILE: Ped-08 dis: # cardiovas condns
+V_CORDB	VARFILE: Ambilical cord arnd body
+V_CORDK	VARFILE: Ambilical cord in knot
+V_CORDNL	VARFILE: # times cord arnd neck loosely
+V_CORDNT	VARFILE: # times cord arnd neck tightly
+V_CPDNOW	VARFILE: Cigs/day, now
+V_DEAF	VARFILE: Ped-08 dis: deafness
+V_DELIV	VARFILE: Method of delivery type
+V_DEL_D1	VARFILE: Date of delivery/birth, day
+V_DEL_DT	VARFILE: Date of delivery/birth, date
+V_DEL_MO	VARFILE: Date of delivery/birth, month
+V_DEL_YR	VARFILE: Date of delivery/birth, year
+V_DRUG	VARFILE: OB-60 dis: hx off drug addictn
+V_EDUC	"VARFILE: Mother""s education (yrs)"
+V_EDUC1	"VARFILE: Mother""s education, categ"
+V_EDUCF	"VARFILE: Educ level (yrs), baby""s father"
+V_EDUCF1	"VARFILE: Father""s education, categ"
+V_FEEDBR	VARFILE: Feeding method - # days breast
+V_FEEDBT	VARFILE: Feeding method - # days bottle
+V_FMINC	VARFILE: Family income (encoded)
+V_FOBMI	VARFILE: Father - mental illness
+V_FOBMIG	VARFILE: Father - mental illness, grped
+V_FOBMR	VARFILE: Father - mental retardation
+V_FOBMRG	VARFILE: Father - mental retardation,grp
+V_GEB4YR	VARFILE: Graham-Ernhart Block @ 4 yrs
+V_GENDER	"VARFILE: Child""s gender"
+V_GEST	VARFILE: Reported length of gestation,wk
+V_HCIRC	VARFILE: Head circumference @birth (cm)
+V_HDENS	VARFILE: Housing density code
+V_HGT7YR	VARFILE: Height at 7 yrs (cms)
+V_HRATE	VARFILE: Ped-08 dis: heart rate disord
+V_IQ4YR	VARFILE: Stanford-Binet IQ @ 4 yrs
+V_IQ4YRG	VARFILE: Stanford-Binet IQ @ 4 yrs, grpd
+V_LMPREG	VARFILE: Weeks between lmp & registratn
+V_LMP_D1	VARFILE: Date of lmp, day
+V_LMP_DT	VARFILE: Date of lmp, date
+V_LMP_MO	VARFILE: Date of lmp, month
+V_LMP_YR	VARFILE: Date of lmp, year
+V_MAGE	VARFILE: Maternal age (yrs)
+V_MATMI	VARFILE: Mother - mental illness
+V_MATMIG	VARFILE: Mother - mental illness, grped
+V_MATMR	VARFILE: Mother - mental retardation
+V_MATMRG	VARFILE: Mother - mental retardation,grp
+V_MBMIPP	VARFILE: Maternal pre-preg BMI, computed
+V_MECON	VARFILE: Meconium (0=no,1=yes)
+V_MENRET	VARFILE: OB-60 dis: mom mental retardatn
+V_MHGT	VARFILE: Maternal height, inches
+V_MWGTDL	VARFILE: Maternal wgt @delivery/birth,lb
+V_MWGTGN	VARFILE: Max maternal preg wgt gain, lbs
+V_MWGTPP	VARFILE: Maternal weight, pre-preg, lbs
+V_MWTGN1	VARFILE: Max maternal preg wt gain,categ
+V_OCCUPG	VARFILE: Occupation code - gravida
+V_OTHNR	VARFILE: OB-60 dis:other neurol/psychiat
+V_OUTCOM	VARFILE: Death/survival outcome
+V_PARITY	VARFILE: Parity (nonabort or =20wk gest)
+V_PERSUP	VARFILE: # of persons supported
+V_PLOSS	VARFILE: Ped-12 dis: loss of parent(s)
+V_PLPREV	VARFILE: Placenta previa
+V_PLURAL	VARFILE: Plurality code
+V_PLWGT	VARFILE: Placental weight (grams)
+V_PMP_D1	VARFILE: Date of pmp, day
+V_PMP_DT	VARFILE: Date of pmp, date
+V_PMP_I	VARFILE: Flag to indicate if PMP date wa
+V_PMP_MO	VARFILE: Date of pmp, month
+V_PMP_YR	VARFILE: Date of pmp, year
+V_PNCNUM	VARFILE: Prenatal care visits, number
+V_PNCSMK	VARFILE: Yrs smoked at registration
+V_POLYHY	VARFILE: Polyhydramnios
+V_PREG	VARFILE: Ever pregnant (using vparity)
+V_QUOT	VARFILE: Quotient - mother IQ
+V_RACE	VARFILE: Race
+V_RACEF	"VARFILE: Race, baby""s father"
+V_REG_D1	VARFILE: Date of registration, day
+V_REG_DT	VARFILE: Date of registration, date
+V_REG_MO	VARFILE: Date of registration, month
+V_REG_YR	VARFILE: Date of registration, year
+V_RHYTHM	VARFILE: Ped-08 dis: heart rhythm disor
+V_SCORE	VARFILE: Total raw score - mother IQ
+V_SEINDX	VARFILE: Socio-economic index
+V_SIBED	VARFILE: All sibs - emotional disturb
+V_SIBMR	VARFILE: All sibs - mental retardation
+V_SMKNOW	VARFILE: Smoking status, now
+V_THORAC	VARFILE: Ped-08 dis: # thoracic abnorms
+V_UNFENV	VARFILE: Ped-12 dis: unfav emot environ
+V_VAGBLD	VARFILE: Vaginal bleeding by trimester
+V_WGT7YR	VARFILE: Weight at 7 yrs (kgms)

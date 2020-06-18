@@ -1,0 +1,14 @@
+RACEC1	Race: Black
+RACEC2	Race: Other
+V_GENDER	VARFILE: Child's gender
+V_SEINDX	VARFILE: Socio-economic index
+V_FMINC	VARFILE: Family income (encoded)
+V_MHGT	VARFILE: Maternal height, inches
+V_MAGE	VARFILE: Maternal age (yrs)
+V_PREG	VARFILE: Ever pregnant (using vparity)
+V_PARITY	VARFILE: Parity (nonabort or =20wk gest)
+V_HDENS	VARFILE: Housing density code
+V_PERSUP	VARFILE: # of persons supported
+ED_M_B	Education of mother at birth of child
+V_EDUCF	VARFILE: Educ level (yrs), baby's father
+V_MWGTPP	VARFILE: Maternal weight, pre-preg, lbs
