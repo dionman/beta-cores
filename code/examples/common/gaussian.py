@@ -21,9 +21,6 @@ def gaussian_KL(mu0, Sig0, mu1, Sig1inv):
   t1 = np.dot(Sig1inv, Sig0).trace()
   t2 = np.dot((mu1-mu0),np.dot(Sig1inv, mu1-mu0))
   t3 = -np.linalg.slogdet(Sig1inv)[1] - np.linalg.slogdet(Sig0)[1]
-  #print('t1 : ', t1)
-  #print('t2 : ', t2)
-  #print('t3 : ', t3)
   return 0.5*(t1+t2+t3-mu0.shape[0])
 
 def weighted_post(th0, Sig0inv, Siginv, x, w): 
