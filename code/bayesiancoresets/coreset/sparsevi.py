@@ -1,6 +1,6 @@
 import numpy as np
 from ..util.errors import NumericalPrecisionError
-from ..util.opt import nn_opt, nn_opt_diagn
+from ..util.opt import nn_opt
 from .coreset import Coreset
 
 class SparseVICoreset(Coreset):
@@ -79,10 +79,7 @@ class SparseVICoreset(Coreset):
       #output gradient of weights at idcs
       return -corevecs.dot(resid) / corevecs.shape[1]
     x0 = self.wts
-    if not self.diagnostics:
-      self.wts = nn_opt(x0, grd, opt_itrs=self.opt_itrs, step_sched = self.step_sched)
-    else:
-      self.wts = nn_opt_diagn(x0, grd, opt_itrs=self.opt_itrs, step_sched = self.step_sched, Zmean=self.Zmean, mup=self.mup, SigpInv=self.SigpInv, m=self.size(), d=x0.shape[0], data=self.pts)
+    self.wts = nn_opt(x0, grd, opt_itrs=self.opt_itrs, step_sched = self.step_sched)
 
   def error(self):
     return 0. #TODO: implement KL estimate

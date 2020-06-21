@@ -6,62 +6,60 @@ import bayesiancoresets as bc
 from scipy.stats import multivariate_normal
 #make it so we can import models/etc from parent folder
 sys.path.insert(1, os.path.join(sys.path[0], '../common'))
-import model_linreg
-
-def build_synthetic_dataset(N, w, noise_std=0.1):
-  d = len(w)
-  x = np.random.randn(N, d)
-  x[:,-1]=1.
-  y = np.dot(x, w) + np.random.normal(0, noise_std, size=N)
-  return x, y
+import gaussian
 
 nm = sys.argv[1]
 tr = sys.argv[2]
-i0 = 1.
+np.random.seed(int(tr))
+
+i0 = 0.1
 results_fldr = 'results'
 if not os.path.exists(results_fldr):
   os.mkdir(results_fldr)
 
-#use the trial # as seed
-np.random.seed(int(tr))
 M = 300
 SVI_opt_itrs = 1000
 BPSVI_opt_itrs = 1000
+BCORES_opt_itrs = 1000
 n_subsample_opt = 200
-n_subsample_select = 10000
+n_subsample_select = 1000
 proj_dim = 100
 pihat_noise = 0.75
 BPSVI_step_sched = lambda m: lambda i : i0/(1+i)
 SVI_step_sched = lambda i : i0/(1+i)
+BCORES_step_sched = lambda i : i0/(1+i)
 
 N = 2000  # number of data points
-D = 100  # number of features
-d = D+1 # dimensionality of w
+d = 10  # number of dimensions
 
-w_true = np.random.randn(d)
-X, Y = build_synthetic_dataset(N, w_true)
-Z = np.hstack((X, Y[:,np.newaxis]))
-
-#get empirical mean/std
-datastd = Y.std()
-datamn = Y.mean()
-
-#model params
-mu0 = datamn*np.ones(d)
-ey = np.eye(d)
-Sig0 = (datastd**2+datamn**2)*ey
+mu0 = np.zeros(d)
+Sig0 = np.eye(d)
+Sig = np.eye(d)
+SigL = np.linalg.cholesky(Sig)
+th = np.ones(d)
 Sig0inv = np.linalg.inv(Sig0)
-#get true posterior
-mup, LSigp, LSigpInv = model_linreg.weighted_post(mu0, Sig0inv, datastd**2, Z, np.ones(X.shape[0]))
+Siginv = np.linalg.inv(Sig)
+SigLInv = np.linalg.inv(SigL)
+logdetSig = np.linalg.slogdet(Sig)[1]
+X = np.random.multivariate_normal(th, Sig, N)
+mup, LSigp, LSigpInv = gaussian.weighted_post(mu0, Sig0inv, Siginv, X, np.ones(X.shape[0]))
 Sigp = LSigp.dot(LSigp.T)
 SigpInv = LSigpInv.dot(LSigpInv.T)
 
+beta = 0.5
+
 #create function to output log_likelihood given param samples
 print('Creating log-likelihood function')
-log_likelihood = lambda z, th : model_linreg.gaussian_loglikelihood(z, th, datastd**2)
+log_likelihood = lambda x, th : gaussian.gaussian_loglikelihood(x, th, Siginv, logdetSig)
 
 print('Creating gradient log-likelihood function')
-grad_log_likelihood = lambda z, th : model_linreg.gaussian_grad_x_loglikelihood(z, th, datastd**2)
+grad_log_likelihood = lambda x, th : gaussian.gaussian_gradx_loglikelihood(x, th, Siginv)
+
+print('Creating beta likelihood function')
+beta_likelihood = lambda x, th : gaussian.gaussian_beta_likelihood(x, th, Siginv, logdetSig, beta)
+
+print('Creating gradient grad beta function')
+grad_beta = lambda x, th : model_linreg.gaussian_beta_gradient(x, th, Siginv, logdetSig, beta)
 
 #create tangent space for well-tuned Hilbert coreset alg
 print('Creating tuned projector for Hilbert coreset construction')
@@ -85,20 +83,24 @@ print('Creating black box projector')
 def sampler_w(n, wts, pts):
     if pts.shape[0] == 0:
       wts = np.zeros(1)
-      pts = np.zeros((1, Z.shape[1]))
-    muw, LSigw, LSigwInv = model_linreg.weighted_post(mu0, Sig0inv, datastd**2, pts, wts)
+      pts = np.zeros((1, X.shape[1]))
+    muw, LSigw, LSigwInv = gaussian.weighted_post(mu0, Sig0inv, datastd**2, pts, wts)
     return muw + np.random.randn(n, muw.shape[0]).dot(LSigw.T)
 prj_w = bc.BlackBoxProjector(sampler_w, proj_dim, log_likelihood, grad_log_likelihood)
+bprj_w = bc.BlackBoxProjector(sampler_w, proj_dim, beta_likelihood, grad_beta)
+
 
 #create coreset construction objects
 print('Creating coreset construction objects')
-sparsevi = bc.SparseVICoreset(Z, prj_w, opt_itrs = SVI_opt_itrs, n_subsample_opt = n_subsample_opt,  n_subsample_select = n_subsample_select, step_sched = SVI_step_sched)
-bpsvi = bc.BatchPSVICoreset(Z, prj_w, opt_itrs = BPSVI_opt_itrs, n_subsample_opt = n_subsample_opt, step_sched = BPSVI_step_sched)
+sparsevi = bc.SparseVICoreset(X, prj_w, opt_itrs = SVI_opt_itrs, n_subsample_opt = n_subsample_opt,  n_subsample_select = n_subsample_select, step_sched = SVI_step_sched)
+bpsvi = bc.BatchPSVICoreset(X, prj_w, opt_itrs = BPSVI_opt_itrs, n_subsample_opt = n_subsample_opt, step_sched = BPSVI_step_sched)
+bcoresvi = bc.BetaCoreset(X, bprj_w, opt_itrs = BCORES_opt_itrs, n_subsample_opt = n_subsample_opt,  n_subsample_select = n_subsample_select, step_sched = BCORES_step_sched)
 giga_optimal = bc.HilbertCoreset(Z, prj_optimal)
 giga_realistic = bc.HilbertCoreset(Z, prj_realistic)
 unif = bc.UniformSamplingCoreset(Z)
 
-algs = {'BPSVI': bpsvi,
+algs = {'BCORES': bcoresvi,
+        'BPSVI': bpsvi,
         'SVI': sparsevi,
         'GIGAO': giga_optimal,
         'GIGAR': giga_realistic,

@@ -1,6 +1,6 @@
 import numpy as np
 from ..util.errors import NumericalPrecisionError
-from ..util.opt import partial_nn_opt, nzc_opt, partial_nn_opt_diagn
+from ..util.opt import partial_nn_opt
 from .coreset import Coreset
 
 class BatchPSVICoreset(Coreset):
@@ -12,8 +12,6 @@ class BatchPSVICoreset(Coreset):
     self.step_sched = step_sched
     self.mup = mup
     self.SigpInv = SigpInv
-    self.Zmean = Zmean
-    self.diagnostics = diagnostics
     super().__init__(**kw)
 
   def _build(self, itrs, sz):
@@ -59,17 +57,7 @@ class BatchPSVICoreset(Coreset):
       return grad
     
     x0 = np.hstack((self.wts, self.pts.reshape(sz*d)))
-    # initialization for mnist assign sign of label to zero x0 elements
-    #self.pts = np.apply_along_axis(lambda r: r+(np.sign(np.max(r))+np.sign(np.min(r)))*(1e-12), axis=1, arr=self.pts )
-    #x0 = np.hstack((self.wts, self.pts.reshape(sz*d)))
-    # full non-negative projection for mnist visualization!!!
-    #xf = nzc_opt(x0, grd, np.arange(sz), self.opt_itrs, step_sched=self.step_sched(sz))  
-    # project weights on non-negative values
-    if not self.diagnostics:
-      xf = partial_nn_opt(x0, grd, np.arange(sz), self.opt_itrs, step_sched = self.step_sched(sz))
-    else:
-      xf = partial_nn_opt_diagn(x0, grd, np.arange(sz), self.opt_itrs, step_sched = self.step_sched(sz), Zmean=self.Zmean, mup=self.mup, SigpInv=self.SigpInv, m=sz, d=d)
-    #print('self.Zmean inside bpsvi : ', self.Zmean)
+    xf = partial_nn_opt(x0, grd, np.arange(sz), self.opt_itrs, step_sched = self.step_sched(sz))
     self.wts = xf[:sz]
     self.pts = xf[sz:].reshape((sz, d))
 
