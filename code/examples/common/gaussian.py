@@ -29,3 +29,26 @@ def weighted_post(th0, Sig0inv, Siginv, x, w):
   mup = np.dot(LSigp.dot(LSigp.T),  np.dot(Sig0inv,th0) + np.dot(Siginv, (w[:, np.newaxis]*x).sum(axis=0)))
   return mup, LSigp, LSigpInv
 
+def gaussian_beta_likelihood(x, th, Siginv, logdetSig, beta):
+  x = np.atleast_2d(x)
+  th = np.atleast_2d(th)
+  d = float(x.shape[1])
+  thSiginvth = (th*(th.dot(Siginv))).sum(axis=1)
+  xSiginvth = x.dot(Siginv.dot(th.T))
+  cnst = (2*np.pi)**(.5*d*beta)*(np.exp(logdetSig))**(.5*beta)
+  t1 = ((beta+1.)/beta)*cnst*np.exp(-.5*d*(xSiginvx[:, np.newaxis] + thSiginvth - 2*xSiginvth))
+  t2 = cnst*(1+beta)**(-.5*d)
+  return -t1+t2
+
+def gaussian_beta_gradient(x, th, Siginv, logdetSig, beta):
+  x = np.atleast_2d(x)
+  th = np.atleast_2d(th)
+  d = float(x.shape[1])
+  thSiginvth = (th*(th.dot(Siginv))).sum(axis=1)
+  xSiginvth = x.dot(Siginv.dot(th.T))
+  cnst = (2*np.pi)**(.5*d*beta)*(np.exp(logdetSig))**(.5*beta)
+  t1 = ((beta+1.)/beta)*np.log((2*np.pi)**(-.5*d)**(np.exp(logdetSig))**(-.5))*np.exp(-.5*d*(xSiginvx[:, np.newaxis] + thSiginvth - 2*xSiginvth))
+  t2 = beta**(-2.)*np.exp(-.5*d*(xSiginvx[:, np.newaxis] + thSiginvth - 2*xSiginvth))
+  t3 = 1./N*np.log((2*np.pi)**(-.5*d)**(np.exp(logdetSig))**(-.5))*(1.+beta)**(-0.5*d)
+  t4 = d/(2.*N)*(1.+beta)**(-.5*(d+1))
+  return cnst*(-t1+t2+t3-t4)
