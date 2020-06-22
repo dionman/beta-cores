@@ -87,7 +87,7 @@ def sampler_w(sz, wts, pts, diag=False):
   return muw + np.random.randn(sz, muw.shape[0]).dot(LSigw.T)
 
 prj_w = bc.BlackBoxProjector(sampler_w, proj_dim, log_likelihood, grad_log_likelihood)
-prj_bw = bc.BetaBlackBoxProjector(sampler_w, proj_dim, beta_likelihood)
+prj_bw = bc.BetaBlackBoxProjector(sampler_w, proj_dim, beta_likelihood, log_likelihood)
 
 #create coreset construction objects
 print('Creating coreset construction objects')

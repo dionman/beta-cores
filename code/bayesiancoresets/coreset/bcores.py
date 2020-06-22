@@ -32,17 +32,20 @@ class BetaCoreset(Coreset):
     self.ll_projector.update(w, p)
 
     #construct a tangent space
+
+    # component of full dataset (kl-divergence)
     if n_subsample is None:
       sub_idcs = None
-      vecs = self.ll_projector.project(self.data, beta)
+      vecs = self.ll_projector.project_fprime(self.data)
       sum_scaling = 1.
     else:
       sub_idcs = np.random.randint(self.data.shape[0], size=n_subsample)
-      vecs = self.ll_projector.project(self.data[sub_idcs], beta)
+      vecs = self.ll_projector.project_fprime(self.data[sub_idcs])
       sum_scaling = self.data.shape[0]/n_subsample
 
+    # component of coreset (using beta-divergence)
     if self.pts.size > 0:
-      corevecs = self.ll_projector.project(self.pts, beta)
+      corevecs = self.ll_projector.project_f(self.pts, beta)
     else:
       corevecs = np.zeros((0, vecs.shape[1]))
 

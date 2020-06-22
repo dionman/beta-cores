@@ -33,24 +33,22 @@ class BlackBoxProjector(Projector):
         self.samples = self.sampler(self.projection_dimension, wts, pts)
 
 class BetaBlackBoxProjector(Projector):
-    def __init__(self, sampler, projection_dimension, loglikelihood, grad_loglikelihood=None):
+    def __init__(self, sampler, projection_dimension, beta_likelihood, loglikelihood):
         self.projection_dimension = projection_dimension
         self.sampler = sampler
+        self.beta_likelihood = beta_likelihood
         self.loglikelihood = loglikelihood
-        self.grad_loglikelihood = grad_loglikelihood
         self.update(np.array([]), np.array([]))
 
-    def project(self, pts, beta, grad=False):
+    def project_f(self, pts, beta):
         lls = self.loglikelihood(pts, self.samples, beta)
         lls -= lls.mean(axis=1)[:,np.newaxis]
-        if grad:
-            if self.grad_loglikelihood is None:
-                raise ValueError('grad_loglikelihood was requested but not initialized in BlackBoxProjector.project')
-            glls = self.grad_loglikelihood(pts, self.samples, beta)
-            glls -= glls.mean(axis=2)[:, :, np.newaxis]
-            return lls, glls
-        else:
-            return lls
+        return lls
+
+    def project_fprime(self, pts):
+        lls = self.beta_likelihood(pts, self.samples)
+        lls -= lls.mean(axis=1)[:,np.newaxis]
+        return lls
 
     def update(self, wts, pts):
         self.samples = self.sampler(self.projection_dimension, wts, pts)
