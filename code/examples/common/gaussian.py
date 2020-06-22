@@ -36,21 +36,25 @@ def gaussian_beta_likelihood(x, th, beta, Siginv, logdetSig):
   xSiginvx = (x*(x.dot(Siginv))).sum(axis=1)
   thSiginvth = (th*(th.dot(Siginv))).sum(axis=1)
   xSiginvth = x.dot(Siginv.dot(th.T))
-  cnst = (2*np.pi)**(.5*d*beta)*(np.exp(logdetSig))**(.5*beta)
-  t1 = ((beta+1.)/beta)*cnst*np.exp(-.5*d*(xSiginvx[:, np.newaxis] + thSiginvth - 2*xSiginvth))
-  t2 = cnst*(1+beta)**(-.5*d)
-  return -t1+t2
+  cnst = (2*np.pi)**(-.5*d)*(np.exp(logdetSig)**(-.5))**beta
+  t1 = ((beta+1.)/beta)*np.exp(-.5*beta*(xSiginvx[:, np.newaxis] + thSiginvth - 2*xSiginvth))
+  t2 = (1+beta)**(-.5*d)
+  return t1-t2
 
 def gaussian_beta_gradient(x, th, beta, Siginv, logdetSig):
   x = np.atleast_2d(x)
   th = np.atleast_2d(th)
-  d = float(x.shape[1])
+  N, d = x.shape
   xSiginvx = (x*(x.dot(Siginv))).sum(axis=1)
   thSiginvth = (th*(th.dot(Siginv))).sum(axis=1)
   xSiginvth = x.dot(Siginv.dot(th.T))
-  cnst = (2*np.pi)**(.5*d*beta)*(np.exp(logdetSig))**(.5*beta)
-  t1 = ((beta+1.)/beta)*np.log((2*np.pi)**(-.5*d)**(np.exp(logdetSig))**(-.5))*np.exp(-.5*d*(xSiginvx[:, np.newaxis] + thSiginvth - 2*xSiginvth))
-  t2 = beta**(-2.)*np.exp(-.5*d*(xSiginvx[:, np.newaxis] + thSiginvth - 2*xSiginvth))
-  t3 = 1./N*np.log((2*np.pi)**(-.5*d)**(np.exp(logdetSig))**(-.5))*(1.+beta)**(-0.5*d)
-  t4 = d/(2.*N)*(1.+beta)**(-.5*(d+1))
-  return cnst*(-t1+t2+t3-t4)
+  cnst = (2*np.pi)**(-.5*d)*(np.exp(logdetSig)**(-.5))**beta
+  logcnst = np.log((2*np.pi)**(-.5*d)*(np.exp(logdetSig)**(-.5)))
+  gaussq = np.exp(-.5*beta*(xSiginvx[:, np.newaxis] + thSiginvth - 2*xSiginvth))
+  t11 = ((beta+1.)/beta)*gaussq
+  t12 = 1./N*(1+beta)**(-.5*d)
+  t1 = logcnst*(t11-t12)
+  t2 = 1./(beta)**2*gaussq
+  t3 = (beta+1.)/(2.*beta)*(xSiginvx[:, np.newaxis] + thSiginvth - 2*xSiginvth)*gaussq
+  t4 = 1./N*(1+beta)**(-.5*d)*np.log(1.+beta)
+  return cnst*(t1-t2-t3-t4)

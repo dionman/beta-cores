@@ -31,7 +31,7 @@ SVI_step_sched = lambda i : i0/(1.+i)
 BCORES_step_sched = lambda i : i0/(1.+i)
 
 N = 2000  # number of data points
-d = 10  # number of dimensions
+d = 50  # number of dimensions
 
 mu0 = np.zeros(d)
 Sig0 = np.eye(d)
@@ -87,13 +87,17 @@ def sampler_w(sz, wts, pts, diag=False):
   return muw + np.random.randn(sz, muw.shape[0]).dot(LSigw.T)
 
 prj_w = bc.BlackBoxProjector(sampler_w, proj_dim, log_likelihood, grad_log_likelihood)
-prj_bw = bc.BetaBlackBoxProjector(sampler_w, proj_dim, beta_likelihood, log_likelihood)
+prj_bw = bc.BetaBlackBoxProjector(sampler_w, proj_dim, beta_likelihood, log_likelihood, grad_beta)
 
 #create coreset construction objects
 print('Creating coreset construction objects')
-sparsevi = bc.SparseVICoreset(X, prj_w, opt_itrs = SVI_opt_itrs, n_subsample_opt = n_subsample_opt,  n_subsample_select = n_subsample_select, step_sched = SVI_step_sched)
-bpsvi = bc.BatchPSVICoreset(X, prj_w, opt_itrs = BPSVI_opt_itrs, n_subsample_opt = n_subsample_opt, step_sched = BPSVI_step_sched)
-bcoresvi = bc.BetaCoreset(X, prj_bw, opt_itrs = BCORES_opt_itrs, n_subsample_opt = n_subsample_opt,  n_subsample_select = n_subsample_select, step_sched = BCORES_step_sched)
+sparsevi = bc.SparseVICoreset(X, prj_w, opt_itrs = SVI_opt_itrs, n_subsample_opt = n_subsample_opt,
+                              n_subsample_select = n_subsample_select, step_sched = SVI_step_sched)
+bpsvi = bc.BatchPSVICoreset(X, prj_w, opt_itrs = BPSVI_opt_itrs, n_subsample_opt = n_subsample_opt,
+                            step_sched = BPSVI_step_sched)
+bcoresvi = bc.BetaCoreset(X, prj_bw, opt_itrs = BCORES_opt_itrs, n_subsample_opt = n_subsample_opt,
+                           n_subsample_select = n_subsample_select, step_sched = BCORES_step_sched,
+                           beta = 0.5, learn_beta=False)
 giga_optimal = bc.HilbertCoreset(X, prj_optimal)
 giga_realistic = bc.HilbertCoreset(X, prj_realistic)
 unif = bc.UniformSamplingCoreset(X)
@@ -133,8 +137,11 @@ else:
       print('trial: ' + str(tr) +' alg: ' + nm + ' ' + str(m) +'/'+str(M))
       alg.build(1, m)
       #store weights
-      if nm=='BCORES': wts, pts, idcs, beta = alg.get()
-      else: wts, pts, idcs = alg.get()
+      if nm=='BCORES':
+        wts, pts, idcs, beta = alg.get()
+        print(alg.get())
+      else:
+        wts, pts, idcs = alg.get()
       w.append(wts)
       p.append(pts)
     else:

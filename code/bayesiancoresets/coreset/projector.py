@@ -33,20 +33,30 @@ class BlackBoxProjector(Projector):
         self.samples = self.sampler(self.projection_dimension, wts, pts)
 
 class BetaBlackBoxProjector(Projector):
-    def __init__(self, sampler, projection_dimension, beta_likelihood, loglikelihood):
+    def __init__(self, sampler, projection_dimension, beta_likelihood, loglikelihood, beta_gradient):
         self.projection_dimension = projection_dimension
         self.sampler = sampler
         self.beta_likelihood = beta_likelihood
         self.loglikelihood = loglikelihood
+        self.beta_gradient = beta_gradient
         self.update(np.array([]), np.array([]))
 
-    def project_f(self, pts, beta):
-        lls = self.loglikelihood(pts, self.samples, beta)
-        lls -= lls.mean(axis=1)[:,np.newaxis]
-        return lls
+    def project_f(self, pts, beta, grad=False):
+        # projections using beta-divergence
+        bls = self.beta_likelihood(pts, self.samples, beta)
+        bls -= bls.mean(axis=1)[:,np.newaxis]
+        if grad:
+            if self.beta_gradient is None:
+                raise ValueError('grad_loglikelihood was requested but not initialized in BlackBoxProjector.project')
+            glls = self.beta_gradient(pts, self.samples, beta)
+            glls -= glls.mean(axis=1)[:,np.newaxis]
+            return bls, glls
+        else:
+            return bls
 
     def project_fprime(self, pts):
-        lls = self.beta_likelihood(pts, self.samples)
+        # projections using kl-divergence
+        lls = self.loglikelihood(pts, self.samples)
         lls -= lls.mean(axis=1)[:,np.newaxis]
         return lls
 
