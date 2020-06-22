@@ -4,7 +4,9 @@ from ..util.opt import nn_opt
 from .coreset import Coreset
 
 class BetaCoreset(Coreset):
-  def __init__(self, data, ll_projector, n_subsample_select=None, n_subsample_opt=None, opt_itrs=100, step_sched=lambda i : 1./(1.+i), mup=None, Zmean=None, SigpInv=None, diagnostics=False,**kw): 
+  def __init__(self, data, ll_projector, n_subsample_select=None, n_subsample_opt=None,
+              opt_itrs=100, step_sched=lambda i : 1./(1.+i), mup=None, SigpInv=None,
+              beta=.5, **kw):
     self.data = data
     self.ll_projector = ll_projector
     self.n_subsample_select = None if n_subsample_select is None else min(data.shape[0], n_subsample_select)
@@ -13,6 +15,7 @@ class BetaCoreset(Coreset):
     self.opt_itrs = opt_itrs
     self.mup = mup
     self.SigpInv = SigpInv
+    self.beta = beta
     super().__init__(**kw)
 
   def _build(self, itrs, sz):
@@ -22,31 +25,31 @@ class BetaCoreset(Coreset):
       #search for the next best point
       self._select()
       #update the weights
-      self._optimize() 
+      self._optimize()
 
-  def _get_projection(self, n_subsample, w, p):
+  def _get_projection(self, n_subsample, w, p, beta):
     #update the projector
     self.ll_projector.update(w, p)
 
     #construct a tangent space
     if n_subsample is None:
       sub_idcs = None
-      vecs = self.ll_projector.project(self.data)
+      vecs = self.ll_projector.project(self.data, beta)
       sum_scaling = 1.
     else:
       sub_idcs = np.random.randint(self.data.shape[0], size=n_subsample)
-      vecs = self.ll_projector.project(self.data[sub_idcs])
+      vecs = self.ll_projector.project(self.data[sub_idcs], beta)
       sum_scaling = self.data.shape[0]/n_subsample
 
     if self.pts.size > 0:
-      corevecs = self.ll_projector.project(self.pts)
+      corevecs = self.ll_projector.project(self.pts, beta)
     else:
       corevecs = np.zeros((0, vecs.shape[1]))
 
     return vecs, sum_scaling, sub_idcs, corevecs
 
   def _select(self):
-    vecs, sum_scaling, sub_idcs, corevecs = self._get_projection(self.n_subsample_select, self.wts, self.pts)
+    vecs, sum_scaling, sub_idcs, corevecs = self._get_projection(self.n_subsample_select, self.wts, self.pts, self.beta)
 
     #compute the residual error
     resid = sum_scaling*vecs.sum(axis=0) - self.wts.dot(corevecs)
@@ -67,12 +70,12 @@ class BetaCoreset(Coreset):
         self.pts.resize((self.pts.shape[0]+1, self.data.shape[1]))
         self.wts[-1] = 0.
         self.idcs[-1] = f
-        self.pts[-1] = self.data[f] 
+        self.pts[-1] = self.data[f]
     return
 
   def _optimize(self):
     def grd(w):
-      vecs, sum_scaling, sub_idcs, corevecs = self._get_projection(self.n_subsample_opt, w, self.pts)
+      vecs, sum_scaling, sub_idcs, corevecs = self._get_projection(self.n_subsample_opt, w, self.pts, self.beta)
       resid = sum_scaling*vecs.sum(axis=0) - w.dot(corevecs)
       #output gradient of weights at idcs
       return -corevecs.dot(resid) / corevecs.shape[1]
@@ -81,3 +84,6 @@ class BetaCoreset(Coreset):
 
   def error(self):
     return 0. #TODO: implement KL estimate
+
+  def get(self):
+    return self.wts[self.wts > 0], self.pts[self.wts > 0, :], self.idcs[self.wts > 0], self.beta

@@ -16,23 +16,24 @@ def gaussian_grad_x_loglikelihood(x, th, Siginv):
   x = np.atleast_2d(x)
   th = np.atleast_2d(th)
   return th.dot(Siginv)[np.newaxis, :, :] - x.dot(Siginv)[:, np.newaxis, :]
- 
+
 def gaussian_KL(mu0, Sig0, mu1, Sig1inv):
   t1 = np.dot(Sig1inv, Sig0).trace()
   t2 = np.dot((mu1-mu0),np.dot(Sig1inv, mu1-mu0))
   t3 = -np.linalg.slogdet(Sig1inv)[1] - np.linalg.slogdet(Sig0)[1]
   return 0.5*(t1+t2+t3-mu0.shape[0])
 
-def weighted_post(th0, Sig0inv, Siginv, x, w): 
+def weighted_post(th0, Sig0inv, Siginv, x, w):
   LSigpInv = np.linalg.cholesky(Sig0inv + w.sum()*Siginv)
   LSigp = sl.solve_triangular(LSigpInv, np.eye(LSigpInv.shape[0]), lower=True, overwrite_b=True, check_finite=False)
   mup = np.dot(LSigp.dot(LSigp.T),  np.dot(Sig0inv,th0) + np.dot(Siginv, (w[:, np.newaxis]*x).sum(axis=0)))
   return mup, LSigp, LSigpInv
 
-def gaussian_beta_likelihood(x, th, Siginv, logdetSig, beta):
+def gaussian_beta_likelihood(x, th, beta, Siginv, logdetSig):
   x = np.atleast_2d(x)
   th = np.atleast_2d(th)
   d = float(x.shape[1])
+  xSiginvx = (x*(x.dot(Siginv))).sum(axis=1)
   thSiginvth = (th*(th.dot(Siginv))).sum(axis=1)
   xSiginvth = x.dot(Siginv.dot(th.T))
   cnst = (2*np.pi)**(.5*d*beta)*(np.exp(logdetSig))**(.5*beta)
@@ -40,10 +41,11 @@ def gaussian_beta_likelihood(x, th, Siginv, logdetSig, beta):
   t2 = cnst*(1+beta)**(-.5*d)
   return -t1+t2
 
-def gaussian_beta_gradient(x, th, Siginv, logdetSig, beta):
+def gaussian_beta_gradient(x, th, beta, Siginv, logdetSig):
   x = np.atleast_2d(x)
   th = np.atleast_2d(th)
   d = float(x.shape[1])
+  xSiginvx = (x*(x.dot(Siginv))).sum(axis=1)
   thSiginvth = (th*(th.dot(Siginv))).sum(axis=1)
   xSiginvth = x.dot(Siginv.dot(th.T))
   cnst = (2*np.pi)**(.5*d*beta)*(np.exp(logdetSig))**(.5*beta)
