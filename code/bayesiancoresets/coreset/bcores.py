@@ -97,11 +97,12 @@ class BetaCoreset(Coreset):
     if self.learn_beta:
       def grd(x):
         w = x[:-1]
-        vecs, sum_scaling, sub_idcs, corevecs, betagrads = self._get_projection_ii(self.n_subsample_opt, x, self.pts, self.beta)
+        beta = x[-1]
+        vecs, sum_scaling, sub_idcs, corevecs, betagrads = self._get_projection_ii(self.n_subsample_opt, w, self.pts, beta)
         resid = sum_scaling*vecs.sum(axis=0) - w.dot(corevecs)
         wgrad = -corevecs.dot(resid) / corevecs.shape[1]
-        ugrad = -w*betagrads.dot(resid)/corevecs.shape[1]
-        grad =  np.hstack((wgrad, ugrad))
+        betagrad = -10**(-12)*w.dot(betagrads.dot(resid))/corevecs.shape[1]
+        grad =  np.hstack((wgrad, betagrad))
         return grad
       x0 = np.hstack((self.wts, np.asarray([self.beta])))
       xf = partial_nn_opt(x0, grd, 1, self.opt_itrs, step_sched = self.step_sched)
