@@ -70,6 +70,7 @@ def partial_nn_opt(x0, grd, nn_idcs, opt_itrs=1000, step_sched=lambda i : 1./(i+
     x -= upd
     #project onto x>=0
     x[nn_idcs] = np.maximum(x[nn_idcs], 0.)
+    #print(x)
   if verbose:
     sys.stdout.write('\n')
     sys.stdout.flush()

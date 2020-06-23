@@ -17,7 +17,7 @@ results_fldr = 'results'
 if not os.path.exists(results_fldr):
   os.mkdir(results_fldr)
 
-M = 50 # max coreset sz
+M = 200 # max coreset sz
 SVI_opt_itrs = 1000
 BPSVI_opt_itrs = 1000
 BCORES_opt_itrs = 1000
@@ -30,14 +30,14 @@ BPSVI_step_sched = lambda m: lambda i : i0/(1.+i)
 SVI_step_sched = lambda i : i0/(1.+i)
 BCORES_step_sched = lambda i : i0/(1.+i)
 
-N = 2000  # number of data points
-d = 50  # number of dimensions
+N = 5000  # number of data points
+d = 40  # number of dimensions
 
 mu0 = np.zeros(d)
 Sig0 = np.eye(d)
-Sig = np.eye(d)
+Sig = 1000*np.eye(d)
 SigL = np.linalg.cholesky(Sig)
-th = np.ones(d)
+th = np.zeros(d)
 Sig0inv = np.linalg.inv(Sig0)
 Siginv = np.linalg.inv(Sig)
 SigLInv = np.linalg.inv(SigL)
@@ -48,7 +48,12 @@ mup, LSigp, LSigpInv = gaussian.weighted_post(mu0, Sig0inv, Siginv, X, np.ones(X
 Sigp = LSigp.dot(LSigp.T)
 SigpInv = LSigpInv.dot(LSigpInv.T)
 
-#create function to output log_likelihood given param samples
+Xoutliers1 = np.random.multivariate_normal(th+200, 0.5*Sig, int(N/50.))
+Xoutliers2 = np.random.multivariate_normal(th+150, 0.1*Sig, int(N/50.))
+Xoutliers3 = np.random.multivariate_normal(th, 10*Sig, int(N/10.))
+Xcorrupted = np.concatenate((X, Xoutliers1, Xoutliers2, Xoutliers3))
+
+#create function to output log_likelihood given param   samples
 print('Creating log-likelihood function')
 log_likelihood = lambda x, th : gaussian_loglikelihood(x, th, Siginv, logdetSig)
 
@@ -82,7 +87,7 @@ print('Creating black box projector for sampling from coreset posterior')
 def sampler_w(sz, wts, pts, diag=False):
   if pts.shape[0] == 0:
     wts = np.zeros(1)
-    pts = np.zeros((1, X.shape[1]))
+    pts = np.zeros((1, Xcorrupted.shape[1]))
   muw, LSigw, LSigwInv = weighted_post(mu0, Sig0inv, Siginv, pts, wts)
   return muw + np.random.randn(sz, muw.shape[0]).dot(LSigw.T)
 
@@ -91,16 +96,16 @@ prj_bw = bc.BetaBlackBoxProjector(sampler_w, proj_dim, beta_likelihood, log_like
 
 #create coreset construction objects
 print('Creating coreset construction objects')
-sparsevi = bc.SparseVICoreset(X, prj_w, opt_itrs = SVI_opt_itrs, n_subsample_opt = n_subsample_opt,
+sparsevi = bc.SparseVICoreset(Xcorrupted, prj_w, opt_itrs = SVI_opt_itrs, n_subsample_opt = n_subsample_opt,
                               n_subsample_select = n_subsample_select, step_sched = SVI_step_sched)
-bpsvi = bc.BatchPSVICoreset(X, prj_w, opt_itrs = BPSVI_opt_itrs, n_subsample_opt = n_subsample_opt,
+bpsvi = bc.BatchPSVICoreset(Xcorrupted, prj_w, opt_itrs = BPSVI_opt_itrs, n_subsample_opt = n_subsample_opt,
                             step_sched = BPSVI_step_sched)
-bcoresvi = bc.BetaCoreset(X, prj_bw, opt_itrs = BCORES_opt_itrs, n_subsample_opt = n_subsample_opt,
+bcoresvi = bc.BetaCoreset(Xcorrupted, prj_bw, opt_itrs = BCORES_opt_itrs, n_subsample_opt = n_subsample_opt,
                            n_subsample_select = n_subsample_select, step_sched = BCORES_step_sched,
-                           beta = 0.5, learn_beta=False)
-giga_optimal = bc.HilbertCoreset(X, prj_optimal)
-giga_realistic = bc.HilbertCoreset(X, prj_realistic)
-unif = bc.UniformSamplingCoreset(X)
+                           beta = .1, learn_beta=False)
+giga_optimal = bc.HilbertCoreset(Xcorrupted, prj_optimal)
+giga_realistic = bc.HilbertCoreset(Xcorrupted, prj_realistic)
+unif = bc.UniformSamplingCoreset(Xcorrupted)
 
 algs = {'BCORES': bcoresvi,
         'BPSVI': bpsvi,
@@ -114,7 +119,7 @@ alg = algs[nm]
 print('Building coreset')
 #build coresets
 w = [np.array([0.])]
-p = [np.zeros((1, X.shape[1]))]
+p = [np.zeros((1, Xcorrupted.shape[1]))]
 
 def build_per_m(m): # construction in parallel for different coreset sizes used in BPSVI
   print('building for m=', m)
@@ -124,7 +129,7 @@ def build_per_m(m): # construction in parallel for different coreset sizes used 
 
 if nm in ['BPSVI']:
   from multiprocessing import Pool
-  pool = Pool(processes=100)
+  pool = Pool(processes=10)
   res = pool.map(build_per_m, range(1, M+1))
   i=1
   for (wts, pts, _) in res:
@@ -163,10 +168,10 @@ for m in range(M+1):
 
 f = open('results/results_'+nm+'_'+str(tr)+'.pk', 'wb')
 if nm=='BCORES':
-  res = (X, mu0, Sig0, Sig, mup, Sigp, w, p, muw, Sigw, rklw, fklw, betas)
+  res = (Xcorrupted, mu0, Sig0, Sig, mup, Sigp, w, p, muw, Sigw, rklw, fklw, betas)
   print('betas : ', betas)
 else:
-  res = (X, mu0, Sig0, Sig, mup, Sigp, w, p, muw, Sigw, rklw, fklw)
+  res = (Xcorrupted, mu0, Sig0, Sig, mup, Sigp, w, p, muw, Sigw, rklw, fklw)
 print('rklw :', rklw)
 pk.dump(res, f)
 f.close()

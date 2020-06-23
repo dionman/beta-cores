@@ -35,18 +35,18 @@ class BetaCoreset(Coreset):
     # component of full dataset (kl-divergence)
     if n_subsample is None:
       sub_idcs = None
-      vecs = self.ll_projector.project_fprime(self.data)
+      vecs = self.ll_projector.project_f(self.data, beta)
       sum_scaling = 1.
     else:
       sub_idcs = np.random.randint(self.data.shape[0], size=n_subsample)
-      vecs = self.ll_projector.project_fprime(self.data[sub_idcs])
+      vecs = self.ll_projector.project_f(self.data[sub_idcs], beta)
       sum_scaling = self.data.shape[0]/n_subsample
     # component of coreset (using beta-divergence)
     if self.pts.size > 0:
       corevecs = self.ll_projector.project_f(self.pts, beta)
     else:
       corevecs = np.zeros((0, vecs.shape[1]))
-    return vecs, sum_scaling, sub_idcs, corevecs
+    return vecs[~np.all(vecs == 0., axis=1)], sum_scaling, sub_idcs, corevecs
 
   def _get_projection_ii(self, n_subsample, w, p, beta):
     #update the projector
@@ -55,18 +55,18 @@ class BetaCoreset(Coreset):
     # component of full dataset (kl-divergence)
     if n_subsample is None:
       sub_idcs = None
-      vecs = self.ll_projector.project_fprime(self.data)
+      vecs = self.ll_projector.project_f(self.data, self.beta)
       sum_scaling = 1.
     else:
       sub_idcs = np.random.randint(self.data.shape[0], size=n_subsample)
-      vecs = self.ll_projector.project_fprime(self.data[sub_idcs])
+      vecs = self.ll_projector.project_f(self.data[sub_idcs], beta)
       sum_scaling = self.data.shape[0]/n_subsample
     # component of coreset (using beta-divergence)
     if self.pts.size > 0:
       corevecs, betagrads = self.ll_projector.project_f(self.pts, beta, grad=True)
     else:
       corevecs, betagrads = np.zeros((0, vecs.shape[1])), np.asarray([0.5])
-    return vecs, sum_scaling, sub_idcs, corevecs, betagrads
+    return vecs[~np.all(vecs == 0., axis=1)], sum_scaling, sub_idcs, corevecs, betagrads
 
   def _select(self):
     vecs, sum_scaling, sub_idcs, corevecs = self._get_projection(self.n_subsample_select, self.wts, self.pts, self.beta)
@@ -101,11 +101,11 @@ class BetaCoreset(Coreset):
         vecs, sum_scaling, sub_idcs, corevecs, betagrads = self._get_projection_ii(self.n_subsample_opt, w, self.pts, beta)
         resid = sum_scaling*vecs.sum(axis=0) - w.dot(corevecs)
         wgrad = -corevecs.dot(resid) / corevecs.shape[1]
-        betagrad = -10**(-12)*w.dot(betagrads.dot(resid))/corevecs.shape[1]
+        betagrad = -10**(-5)*w.dot(betagrads.dot(resid))/corevecs.shape[1]
         grad =  np.hstack((wgrad, betagrad))
         return grad
       x0 = np.hstack((self.wts, np.asarray([self.beta])))
-      xf = partial_nn_opt(x0, grd, 1, self.opt_itrs, step_sched = self.step_sched)
+      xf = partial_nn_opt(x0, grd, np.arange(x0.shape[0]), self.opt_itrs, step_sched = self.step_sched)
       self.wts = xf[:-1]
       self.beta = xf[-1]
     else:
