@@ -31,11 +31,11 @@ SVI_step_sched = lambda i : i0/(1.+i)
 BCORES_step_sched = lambda i : i0/(1.+i)
 
 N = 5000  # number of data points
-d = 40  # number of dimensions
+d = 100  # number of dimensions
 
 mu0 = np.zeros(d)
 Sig0 = np.eye(d)
-Sig = 1000*np.eye(d)
+Sig = 500*np.eye(d)
 SigL = np.linalg.cholesky(Sig)
 th = np.zeros(d)
 Sig0inv = np.linalg.inv(Sig0)

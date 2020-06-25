@@ -20,14 +20,15 @@ def pmf_log_joint(x, phis, psis, wts):
   x = np.atleast_2d(x) # dim: [U, I]
   phis = np.atleast_3d(phis) # dim: [S, U, K]
   psis = np.atleast_3d(psis) # dim: [S, I, K]
-  #wts dim: [U,I]
-  wlls = np.einsum('ui,sui -> s', wts, pmf_log_likelihood(x, phis, psis))
+  #wts dim: [U]
+  wlls = np.einsum('u,sui -> s', wts, pmf_log_likelihood(x, phis, psis))
   return wlls + pmf_log_prior(phis, psis)
 
+def pmf_grad_log_likelihood(x, phis, psis):
+  return 
 
-'''
 def test_pmf_log_likelihood(U=100, I=1000, S=50, K=10):
-  x = np.random.randint(low=0, high=10, size=(U, I))
+  x = np.random.randint(low=0, high=1, size=(U, I))
   phis = np.random.rand(S, U, K)
   psis = np.random.rand(S, I, K)
   print(pmf_log_likelihood(x, phis, psis).shape)
@@ -43,11 +44,10 @@ def test_pmf_log_joint(U=100, I=1000, S=50, K=10):
   x = np.random.randint(low=0, high=10, size=(U, I))
   phis = np.random.rand(S, U, K)
   psis = np.random.rand(S, I, K)
-  w = np.random.rand(U, I)
+  w = np.random.rand(U)
   print(pmf_log_joint(x, phis, psis, w).shape)
   return
 
-test_pmf_log_likelihood()
-test_pmf_log_prior()
-test_pmf_log_joint()
-'''
+#test_pmf_log_likelihood()
+#test_pmf_log_prior()
+#test_pmf_log_joint()
