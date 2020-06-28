@@ -11,7 +11,8 @@ def gaussian_loglikelihood(x, th, Siginv, logdetSig):
   thSiginvth = (th*(th.dot(Siginv))).sum(axis=1)
   xSiginvth = x.dot(Siginv.dot(th.T))
   loglik=-x.shape[1]/2*np.log(2*np.pi) - 1./2.*logdetSig - 1./2.*(xSiginvx[:, np.newaxis] + thSiginvth - 2*xSiginvth)
-  return -x.shape[1]/2*np.log(2*np.pi) - 1./2.*logdetSig - 1./2.*(xSiginvx[:, np.newaxis] + thSiginvth - 2*xSiginvth)
+  print('loglik shape : ', loglik.shape)
+  return loglik
 
 def gaussian_grad_x_loglikelihood(x, th, Siginv):
   x = np.atleast_2d(x)

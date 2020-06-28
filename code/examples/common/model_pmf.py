@@ -8,8 +8,9 @@ def pmf_log_likelihood(x, phis, psis):
   psis = np.atleast_3d(psis) # dim: [S, I, K]
   y = np.tile(x, (phis.shape[0],1,1)) # dim: [S, U, I]
   th = np.einsum('suk,sik -> sui', phis, psis) # dim: [S, U, I]
-  print(phis.shape, psis.shape, y.shape, th.shape)
-  return np.multiply(y, np.log(th))- gammaln(y+1) - th # dim: [S, U, I]
+  thout = np.random.exponential(10**3, (y.shape[0], max(0,y.shape[1]-th.shape[1]), y.shape[2]))
+  th = np.concatenate((th,thout), axis=1)
+  return np.sum(np.multiply(y, np.log(th))- gammaln(y+1) - th, axis=2).T # dim: [U,S]
 
 def pmf_log_prior(phis, psis):
   phis = np.atleast_3d(phis) # dim: [S, U, K]
@@ -21,11 +22,11 @@ def pmf_log_joint(x, phis, psis, wts):
   phis = np.atleast_3d(phis) # dim: [S, U, K]
   psis = np.atleast_3d(psis) # dim: [S, I, K]
   #wts dim: [U]
-  wlls = np.einsum('u,sui -> s', wts, pmf_log_likelihood(x, phis, psis))
+  wlls = np.einsum('u,us -> s', wts, pmf_log_likelihood(x, phis, psis))
   return wlls + pmf_log_prior(phis, psis)
 
 def pmf_grad_log_likelihood(x, phis, psis):
-  return 
+  return
 
 def test_pmf_log_likelihood(U=100, I=1000, S=50, K=10):
   x = np.random.randint(low=0, high=1, size=(U, I))

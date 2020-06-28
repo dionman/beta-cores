@@ -8,7 +8,6 @@ class Projector(object):
     def update(self, wts, pts):
         raise NotImplementedError
 
-
 class BlackBoxProjector(Projector):
     def __init__(self, sampler, projection_dimension, loglikelihood, grad_loglikelihood=None):
         self.projection_dimension = projection_dimension
@@ -18,6 +17,7 @@ class BlackBoxProjector(Projector):
         self.update(np.array([]), np.array([]))
 
     def project(self, pts, grad=False):
+        print('computing loglik')
         lls = self.loglikelihood(pts, self.samples)
         lls -= lls.mean(axis=1)[:,np.newaxis]
         if grad:

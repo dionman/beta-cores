@@ -27,7 +27,7 @@ def sampler(dnm, lr, datafldr, resfldr, N_samples):
 
   print('STAN: building/loading model')
   if lr:
-    if not os.path.exists(os.path.join(resfldr,'pystan_model_logistic.pk')): 
+    if not os.path.exists(os.path.join(resfldr,'pystan_model_logistic.pk')):
       print('STAN: building LR model')
       sm = pystan.StanModel(model_code=logistic_code)
       f = open(os.path.join(resfldr,'pystan_model_logistic.pk'),'wb')
@@ -38,7 +38,7 @@ def sampler(dnm, lr, datafldr, resfldr, N_samples):
       sm = pk.load(f)
       f.close()
   else:
-    if not os.path.exists(os.path.join(resfldr,'pystan_model_poisson.pk')): 
+    if not os.path.exists(os.path.join(resfldr,'pystan_model_poisson.pk')):
       print('STAN: building PR model')
       sm = pystan.StanModel(model_code=poisson_code)
       f = open(os.path.join(resfldr,'pystan_model_poisson.pk'),'wb')
@@ -54,7 +54,7 @@ def sampler(dnm, lr, datafldr, resfldr, N_samples):
   thd = sampler_data['d']+1
   fit = sm.sampling(data=sampler_data, iter=N_samples*2, chains=1, control={'adapt_delta':0.9, 'max_treedepth':15}, verbose=True)
   samples = fit.extract(permuted=False)[:, 0, :thd]
-  np.save(os.path.join(resfldr, dnm+'_samples.npy'), samples) 
+  np.save(os.path.join(resfldr, dnm+'_samples.npy'), samples)
   tf = time.process_time()
   np.save(os.path.join(resfldr, dnm+'_mcmc_time.npy'), tf-t0)
 
@@ -62,7 +62,7 @@ def sampler(dnm, lr, datafldr, resfldr, N_samples):
   #thd = sampler_data['d']+1
   #samples = np.zeros((0, thd))
   #for i in range(int(N_samples/N_per)):
-  #  if i == 0: 
+  #  if i == 0:
   #    fit = sm.sampling(data=sampler_data, iter=N_per*2, chains=1, control={'adapt_delta':0.9, 'max_treedepth':15}, verbose=True)
   #  else:
   #    try:
@@ -71,6 +71,6 @@ def sampler(dnm, lr, datafldr, resfldr, N_samples):
   #      print('STAN: initialization failed, trying again')
   #      fit = sm.sampling(data=sampler_data, iter=N_per*2, chains=1, control={'adapt_delta':0.9, 'max_treedepth':15}, verbose=True)
   #  samples = np.vstack((samples, fit.extract(permuted=False)[:, 0, :thd]))
-  #np.save(os.path.join(resfldr, dnm+'_samples.npy'), samples) 
+  #np.save(os.path.join(resfldr, dnm+'_samples.npy'), samples)
   #tf = time.process_time()
   #np.save(os.path.join(resfldr, dnm+'_mcmc_time.npy'), tf-t0)

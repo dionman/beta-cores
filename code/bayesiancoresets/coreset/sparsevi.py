@@ -4,7 +4,7 @@ from ..util.opt import nn_opt
 from .coreset import Coreset
 
 class SparseVICoreset(Coreset):
-  def __init__(self, data, ll_projector, n_subsample_select=None, n_subsample_opt=None, opt_itrs=100, step_sched=lambda i : 1./(1.+i), mup=None, Zmean=None, SigpInv=None, diagnostics=False,**kw): 
+  def __init__(self, data, ll_projector, n_subsample_select=None, n_subsample_opt=None, opt_itrs=100, step_sched=lambda i : 1./(1.+i), mup=None, Zmean=None, SigpInv=None, diagnostics=False,**kw):
     self.data = data
     self.ll_projector = ll_projector
     self.n_subsample_select = None if n_subsample_select is None else min(data.shape[0], n_subsample_select)
@@ -24,7 +24,7 @@ class SparseVICoreset(Coreset):
       #search for the next best point
       self._select()
       #update the weights
-      self._optimize() 
+      self._optimize()
 
   def _get_projection(self, n_subsample, w, p):
     #update the projector
@@ -39,20 +39,18 @@ class SparseVICoreset(Coreset):
       sub_idcs = np.random.randint(self.data.shape[0], size=n_subsample)
       vecs = self.ll_projector.project(self.data[sub_idcs])
       sum_scaling = self.data.shape[0]/n_subsample
-
     if self.pts.size > 0:
-      corevecs = self.ll_projector.project(self.pts)
+      corevecs = self.ll_projector.project(p)
     else:
       corevecs = np.zeros((0, vecs.shape[1]))
 
     return vecs, sum_scaling, sub_idcs, corevecs
 
   def _select(self):
+    print('SELECTION_STEP')
     vecs, sum_scaling, sub_idcs, corevecs = self._get_projection(self.n_subsample_select, self.wts, self.pts)
-
     #compute the residual error
     resid = sum_scaling*vecs.sum(axis=0) - self.wts.dot(corevecs)
-
     #compute the correlations for the new subsample
     corrs = vecs.dot(resid) / np.sqrt((vecs**2).sum(axis=1)) / vecs.shape[1] #up to a constant; good enough for argmax
     #compute the correlations for the coreset pts (use fabs because we can decrease the weight of these)
@@ -69,10 +67,11 @@ class SparseVICoreset(Coreset):
         self.pts.resize((self.pts.shape[0]+1, self.data.shape[1]))
         self.wts[-1] = 0.
         self.idcs[-1] = f
-        self.pts[-1] = self.data[f] 
+        self.pts[-1] = self.data[f]
     return
 
   def _optimize(self):
+    print('OPTIMIZATION_STEP')
     def grd(w):
       vecs, sum_scaling, sub_idcs, corevecs = self._get_projection(self.n_subsample_opt, w, self.pts)
       resid = sum_scaling*vecs.sum(axis=0) - w.dot(corevecs)
