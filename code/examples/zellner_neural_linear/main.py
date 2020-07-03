@@ -6,19 +6,31 @@ import bayesiancoresets as bc
 from scipy.stats import multivariate_normal
 #make it so we can import models/etc from parent folder
 sys.path.insert(1, os.path.join(sys.path[0], '../common'))
-import model_neurlinreg
-from model_neurlinreg import *
+import model_neurlinr
+from model_neurlinr import *
+from neural import *
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader
+from torch.distributions.normal import Normal
+from torch.distributions.multivariate_normal import MultivariateNormal as MVN
 
-def build_synthetic_dataset(N, w, noise_std=0.1):
-  d = len(w)
-  x = np.random.randn(N, d)
-  x[:,-1]=1.
-  y = np.dot(x, w) + np.random.normal(0, noise_std, size=N)
-  return x, y
 
 nm = sys.argv[1]
 tr = sys.argv[2]
 np.random.seed(int(tr))
+
+synthetic = True
+## Prepare and read dataset
+if synthetic:
+  N = 2000  # number of data points
+  X, Y = build_synthetic_dataset(N)
+else:
+  X, Y = load_data('naval', data_dir='../data', seed=int(tr))
+X, Y = X.astype(np.float32), Y.astype(np.float32)
+Z = np.hstack((X, Y)).astype(np.float32)
+print('Z shape : ', Z.shape)
+
 
 results_fldr = 'results'
 if not os.path.exists(results_fldr):
@@ -36,47 +48,62 @@ BPSVI_step_sched = lambda m: lambda i : i0/(1.+i)
 SVI_step_sched = lambda i : i0/(1.+i)
 BCORES_step_sched = lambda i : i0/(1.+i)
 
-N = 2000  # number of data points
-D = 10  # number of features
-d = D+1 # dimensionality of w
+out_features = 30 # dimension of the ouput of the neural encoder used for lin reg
+#get empirical mean/std
+datastd = Y.std()
+datamn = Y.mean()
 
-w_true = np.random.randn(d)
-X, Y = build_synthetic_dataset(N, w_true)
-Z = np.hstack((X, Y[:,np.newaxis]))
+mu0 = datamn*np.ones(out_features)
+ey = np.eye(out_features)
+Sig0 = (datastd**2+datamn**2)*ey
+Sig0inv = np.linalg.inv(Sig0)
 
-nl = NeuralLinear(Z)
+
+# neural encoder
+nl = NeuralLinear(X, Y, out_features=out_features)
+preds = nl.forward(torch.from_numpy(X))
+feats = nl.encode(torch.from_numpy(X))
 
 #create function to output log_likelihood given param samples
 print('Creating log-likelihood function')
-log_likelihood = lambda z, th: neurlinreg_loglikelihood(z, th)
+log_likelihood = lambda z, th: neurlinr_loglikelihood(z, th, datastd**2)
+grad_log_likelihood = lambda z, th: None
+
+'''
 print('Creating gradient log-likelihood function')
-grad_log_likelihood = lambda z, th: neurlinreg_grad_x_loglikelihood(x, samples[0], samples[1])
+grad_log_likelihood = lambda z, th, nl: neurlinreg_grad_x_loglikelihood(z, th, nl)
 print('Creating gradient grad beta function')
-grad_beta = lambda z, th, beta : neurlinreg_beta_gradient(z, th, beta, Siginv, logdetSig)
+grad_beta = lambda z, th, nl, beta : neurlinreg_beta_gradient(z, th, nl, beta)
+'''
 
 print('Creating black box projector for sampling from coreset posterior')
 def sampler_w(n, wts, pts):
-    if pts.shape[0] == 0:
-      wts = np.zeros(1)
-      pts = np.zeros((1, Z.shape[1]))
-    muw, LSigw, LSigwInv = neurlinreg.weighted_post(mu0, Sig0inv, datastd**2, pts, wts)
-    return muw + np.random.randn(n, muw.shape[0]).dot(LSigw.T)
-prj_w = bc.BlackBoxProjector(sampler_w, proj_dim, log_likelihood, grad_log_likelihood)
+  if pts.shape[0] == 0:
+    wts = np.zeros(1)
+    pts = np.zeros((1, Z.shape[1]))
+  pts = pts.astype(np.float32)
+  pts = np.hstack((nl.encode(torch.from_numpy(pts[:, :-1])).detach().numpy(), pts[:,-1][:,np.newaxis]))
+  muw, LSigw, LSigwInv = model_neurlinr.weighted_post(mu0, Sig0inv, datastd**2, pts, wts)
+  return muw + np.random.randn(n, muw.shape[0]).dot(LSigw.T)
+
+prj_w = bc.BlackBoxProjector(sampler_w, proj_dim, log_likelihood, grad_log_likelihood, nl=nl)
 #prj_bw = bc.BetaBlackBoxProjector(sampler_w, proj_dim, beta_likelihood, log_likelihood, grad_beta)
 
 #create coreset construction objects
 print('Creating coreset construction objects')
-sparsevi = bc.SparseVICoreset(X, prj_w, opt_itrs = SVI_opt_itrs, n_subsample_opt = n_subsample_opt,
+sparsevi = bc.SparseVICoreset(Z, prj_w, opt_itrs = SVI_opt_itrs, n_subsample_opt = n_subsample_opt,
                               n_subsample_select = n_subsample_select, step_sched = SVI_step_sched)
+'''
 bpsvi = bc.BatchPSVICoreset(X, prj_w, opt_itrs = BPSVI_opt_itrs, n_subsample_opt = n_subsample_opt,
                             step_sched = BPSVI_step_sched)
 bcoresvi = bc.BetaCoreset(X, prj_bw, opt_itrs = BCORES_opt_itrs, n_subsample_opt = n_subsample_opt,
                            n_subsample_select = n_subsample_select, step_sched = BCORES_step_sched,
                            beta = .1, learn_beta=False)
+'''
 unif = bc.UniformSamplingCoreset(X)
 
-algs = {'BCORES': bcoresvi,
-        'BPSVI': bpsvi,
+algs = {#'BCORES': bcoresvi,
+        #'BPSVI': bpsvi,
         'SVI': sparsevi,
         'RAND': unif,
         'PRIOR': None}
@@ -85,7 +112,7 @@ alg = algs[nm]
 print('Building coreset')
 #build coresets
 w = [np.array([0.])]
-p = [np.zeros((1, Xcorrupted.shape[1]))]
+p = [np.zeros((1, Z.shape[1]))]
 
 def build_per_m(m): # construction in parallel for different coreset sizes used in BPSVI
   print('building for m=', m)

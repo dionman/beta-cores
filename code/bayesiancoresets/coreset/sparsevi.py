@@ -47,7 +47,6 @@ class SparseVICoreset(Coreset):
     return vecs, sum_scaling, sub_idcs, corevecs
 
   def _select(self):
-    print('SELECTION_STEP')
     vecs, sum_scaling, sub_idcs, corevecs = self._get_projection(self.n_subsample_select, self.wts, self.pts)
     #compute the residual error
     resid = sum_scaling*vecs.sum(axis=0) - self.wts.dot(corevecs)
@@ -71,7 +70,6 @@ class SparseVICoreset(Coreset):
     return
 
   def _optimize(self):
-    print('OPTIMIZATION_STEP')
     def grd(w):
       vecs, sum_scaling, sub_idcs, corevecs = self._get_projection(self.n_subsample_opt, w, self.pts)
       resid = sum_scaling*vecs.sum(axis=0) - w.dot(corevecs)

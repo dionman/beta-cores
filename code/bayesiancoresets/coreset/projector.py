@@ -1,5 +1,6 @@
 import numpy as np
 from ..util.errors import NumericalPrecisionError
+import torch
 
 class Projector(object):
     def project(self, pts, grad=False):
@@ -9,15 +10,20 @@ class Projector(object):
         raise NotImplementedError
 
 class BlackBoxProjector(Projector):
-    def __init__(self, sampler, projection_dimension, loglikelihood, grad_loglikelihood=None):
+    def __init__(self, sampler, projection_dimension, loglikelihood, grad_loglikelihood=None, **kwargs):
         self.projection_dimension = projection_dimension
         self.sampler = sampler
         self.loglikelihood = loglikelihood
         self.grad_loglikelihood = grad_loglikelihood
         self.update(np.array([]), np.array([]))
+        self.encoder = None
+        if 'nl' in kwargs: # encode pts to a learned feature space
+            self.encoder = kwargs['nl']
 
     def project(self, pts, grad=False):
-        print('computing loglik')
+        if self.encoder:
+          pts = pts.astype(np.float32)
+          pts = np.hstack((self.encoder.encode(torch.from_numpy(pts[:, :-1])).detach().numpy(), pts[:,-1][:,np.newaxis]))
         lls = self.loglikelihood(pts, self.samples)
         lls -= lls.mean(axis=1)[:,np.newaxis]
         if grad:
@@ -40,9 +46,14 @@ class BetaBlackBoxProjector(Projector):
         self.loglikelihood = loglikelihood
         self.beta_gradient = beta_gradient
         self.update(np.array([]), np.array([]))
+        if 'nl' in kwargs: # encode pts to a learned feature space
+            self.encoder = kwargs['nl']
 
     def project_f(self, pts, beta, grad=False):
         # projections using beta-divergence
+        if self.encoder:
+          pts = pts.astype(np.float32)
+          pts = np.hstack((self.encoder.encode(torch.from_numpy(pts[:, :-1])).detach().numpy(), pts[:,-1][:,np.newaxis]))
         bls = self.beta_likelihood(pts, self.samples, beta)
         bls -= bls.mean(axis=1)[:,np.newaxis]
         if grad:
@@ -53,12 +64,6 @@ class BetaBlackBoxProjector(Projector):
             return bls, glls
         else:
             return bls
-
-    def project_fprime(self, pts):
-        # projections using kl-divergence
-        lls = self.loglikelihood(pts, self.samples)
-        lls -= lls.mean(axis=1)[:,np.newaxis]
-        return lls
 
     def update(self, wts, pts):
         self.samples = self.sampler(self.projection_dimension, wts, pts)
