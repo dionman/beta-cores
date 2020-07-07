@@ -4,26 +4,19 @@ from torch.utils.data import DataLoader
 from torch.distributions.normal import Normal
 from torch.distributions.multivariate_normal import MultivariateNormal as MVN
 
-
 class BayesianRegressionDense(nn.Module):
-  def __init__(self, shape, sn2=1., s=1.):
+  def __init__(self, shape, sigmasq=1., s=1.):
     """
     Implements Bayesian linear regression with a dense linear layer.
-    :param shape: (int) Number of input features for the regression.
-    :param sn2: (float) Noise variable for linear regression.
-    :param s: (float) Parameter for diagonal prior on the weights of the layer.
     """
     super().__init__()
     self.in_features, self.out_features = shape
-    self.y_var = sn2
+    self.y_var = sigmasq
     self.w_cov_prior = s * torch.eye(self.in_features)
 
   def forward(self, x, X_train, y_train):
     """
-    Computes the predictive mean and variance for test observations given train observations
-    :param x: (torch.tensor) Test observations.
-    :param X_train: (torch.tensor) Training inputs.
-    :param y_train: (torch.tensor) Training outputs.
+    Computes the predictive mean and variance for observations given train observations
     :return: (torch.tensor, torch.tensor) Predictive mean and variance.
     """
     theta_mean, theta_cov = self._compute_posterior(X_train, y_train)
@@ -34,8 +27,6 @@ class BayesianRegressionDense(nn.Module):
   def _compute_posterior(self, X, y):
     """
     Computes the posterior distribution over the weights.
-    :param X: (torch.tensor) Observation inputs.
-    :param y: (torch.tensor) Observation outputs.
     :return: (torch.tensor, torch.tensor) Posterior mean and covariance for layer weights.
     """
     theta_cov = self.y_var * torch.inverse(X.t() @ X + self.y_var * self.w_cov_prior)

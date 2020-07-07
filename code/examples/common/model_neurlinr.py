@@ -2,12 +2,10 @@ import numpy as np
 import scipy.linalg as sl
 import pandas
 
-def load_data(name, data_dir, seed=111):
+def load_data(name, data_dir):
   """
   Return data from UCI sets
-  :param name: (str) Name of dataset to be used
-  :param seed: (int) Random seed for splitting data into train and test
-  :return: Inputs, outputs, and data-splits
+  :return: Inputs, outputs
   """
   np.random.seed(seed)
   if name in ['boston', 'concrete']:
@@ -36,12 +34,9 @@ def build_synthetic_dataset(N=2000, noise_std=0.1, D=10):
   d = D+1 # dimensionality of w
   w = np.random.randn(d)
   X = np.random.randn(N, d)
-  X[:,-1]=1.
+  X[:,-1] = 1.
   Y = (np.dot(X, w) + np.random.normal(0, noise_std, size=N))[:,np.newaxis]
   return X, Y
-
-
-
 
 def neurlinr_loglikelihood(z, th, sigsq):
   z = np.atleast_2d(z)
@@ -53,7 +48,6 @@ def neurlinr_loglikelihood(z, th, sigsq):
 
 def neurlinr_grad_x_loglikelihood(z, th, sigsq):
   pass
-
 
 def weighted_post(th0, Sig0inv, sigsq, z, w):
   z = np.atleast_2d(z)
