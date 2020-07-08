@@ -6,7 +6,6 @@ import bayesiancoresets as bc
 from scipy.stats import multivariate_normal
 #make it so we can import models/etc from parent folder
 sys.path.insert(1, os.path.join(sys.path[0], '../common'))
-import model_neurlinr
 from model_neurlinr import *
 from neural import *
 import torch
@@ -15,28 +14,30 @@ from torch.utils.data import DataLoader
 from torch.distributions.normal import Normal
 from torch.distributions.multivariate_normal import MultivariateNormal as MVN
 
-
 nm = sys.argv[1]
 tr = sys.argv[2]
 np.random.seed(int(tr))
 
 synthetic = True
 ## Prepare and read dataset
+test_size = 1000 # number of test datapoints
 if synthetic:
-  N = 2000  # number of data points
+  N = 3000  # number of data points
   X, Y = build_synthetic_dataset(N)
 else:
   X, Y = load_data('naval', data_dir='../data', seed=int(tr))
 X, Y = X.astype(np.float32), Y.astype(np.float32)
+X, Y, X_test, Y_test = X[:-test_size,:], Y[:-test_size], X[-test_size:,:], Y[-test_size:]
 Z = np.hstack((X, Y)).astype(np.float32)
-print('Z shape : ', Z.shape)
-
+Z_test = np.hstack((X_test, Y_test)).astype(np.float32)
+print('Z and Z_test shape : ', Z.shape, Z_test.shape)
 
 results_fldr = 'results'
 if not os.path.exists(results_fldr):
   os.mkdir(results_fldr)
 
-M = 100 # max coreset sz
+nl = NeuralLinear(Z, out_features=30)
+M = 500 # max coreset sz
 SVI_opt_itrs = 1000
 BPSVI_opt_itrs = 1000
 BCORES_opt_itrs = 1000
@@ -58,15 +59,11 @@ ey = np.eye(out_features)
 Sig0 = (datastd**2+datamn**2)*ey
 Sig0inv = np.linalg.inv(Sig0)
 
-
-# neural encoder
-nl = NeuralLinear(X, Y, out_features=out_features)
-preds = nl.forward(torch.from_numpy(X))
-feats = nl.encode(torch.from_numpy(X))
-
 #create function to output log_likelihood given param samples
 print('Creating log-likelihood function')
-log_likelihood = lambda z, th: neurlinr_loglikelihood(z, th, datastd**2)
+deep_encoder = lambda nl, z: (np.hstack((nl.encode(torch.from_numpy(z[:, :-1].astype(np.float32))).detach().numpy(),
+                                            z[:,-1][:,np.newaxis].astype(np.float32))))
+log_likelihood = (lambda z, th, nl: neurlinr_loglikelihood(deep_encoder(nl, z), th, datastd**2))
 grad_log_likelihood = lambda z, th: None
 
 '''
@@ -81,13 +78,12 @@ def sampler_w(n, wts, pts):
   if pts.shape[0] == 0:
     wts = np.zeros(1)
     pts = np.zeros((1, Z.shape[1]))
-  pts = pts.astype(np.float32)
-  pts = np.hstack((nl.encode(torch.from_numpy(pts[:, :-1])).detach().numpy(), pts[:,-1][:,np.newaxis]))
-  muw, LSigw, LSigwInv = model_neurlinr.weighted_post(mu0, Sig0inv, datastd**2, pts, wts)
+  muw, LSigw, LSigwInv = weighted_post(mu0, Sig0inv, datastd**2, deep_encoder(nl, pts), wts)
   return muw + np.random.randn(n, muw.shape[0]).dot(LSigw.T)
 
 prj_w = bc.BlackBoxProjector(sampler_w, proj_dim, log_likelihood, grad_log_likelihood, nl=nl)
 #prj_bw = bc.BetaBlackBoxProjector(sampler_w, proj_dim, beta_likelihood, log_likelihood, grad_beta)
+
 
 #create coreset construction objects
 print('Creating coreset construction objects')
@@ -142,29 +138,17 @@ else:
         wts, pts, idcs = alg.get()
       w.append(wts)
       p.append(pts)
+      nl = NeuralLinear(p[-1].astype(np.float32), out_features=30)
     else:
       w.append(np.array([0.]))
       p.append(np.zeros((1,Y.shape[0])))
+    if m%10==0:
+      # train deep feature extractor with current coreset datapoints
+      nl.optimize(torch.from_numpy(w[-1].astype(np.float32)), torch.from_numpy(p[-1].astype(np.float32)))
+    alg.update_encoder(nl)
+    test_nll, test_performance = nl.test(torch.from_numpy(Z_test))
+    print(test_nll, test_performance)
 
-# computing kld and saving results
-muw = np.zeros((M+1, mu0.shape[0]))
-Sigw = np.zeros((M+1,mu0.shape[0], mu0.shape[0]))
-rklw = np.zeros(M+1)
-fklw = np.zeros(M+1)
-if nm=='BCORES': betas = np.zeros(M+1)
-for m in range(M+1):
-  muw[m, :], LSigw, LSigwInv = neurlinreg.weighted_post(mu0, Sig0inv, Siginv, p[m], w[m])
-  Sigw[m, :, :] = LSigw.dot(LSigw.T)
-  rklw[m] = neurlinreg.gaussian_KL(muw[m,:], Sigw[m,:,:], mup, SigpInv)
-  fklw[m] = neurlinreg.gaussian_KL(mup, Sigp, muw[m,:], LSigwInv.dot(LSigwInv.T))
-  if nm=='BCORES': betas[m] = beta
 
 f = open('results/results_'+nm+'_'+str(tr)+'.pk', 'wb')
-if nm=='BCORES':
-  res = (X, mu0, Sig0, Sig, mup, Sigp, w, p, muw, Sigw, rklw, fklw, betas)
-  print('betas : ', betas)
-else:
-  res = (X, mu0, Sig0, Sig, mup, Sigp, w, p, muw, Sigw, rklw, fklw)
-print('rklw :', rklw)
-pk.dump(res, f)
 f.close()

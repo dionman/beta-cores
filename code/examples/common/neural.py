@@ -1,8 +1,11 @@
+import numpy as np
 import torch
 import torch.nn as nn
+from torch.utils import data
 from torch.utils.data import DataLoader
 from torch.distributions.normal import Normal
 from torch.distributions.multivariate_normal import MultivariateNormal as MVN
+
 
 class BayesianRegressionDense(nn.Module):
   def __init__(self, shape, sigmasq=1., s=1.):
@@ -36,7 +39,7 @@ class BayesianRegressionDense(nn.Module):
 
 ### MODELS ###
 class NeuralLinear(torch.nn.Module):
-  def __init__(self, X, Y, linear=BayesianRegressionDense, out_features=10, normalize=True):
+  def __init__(self, Z, linear=BayesianRegressionDense, out_features=10, normalize=True):
     """
     Neural linear module. Implements a deep feature extractor with an (approximate) Bayesian layer on top.
     :param linear: (nn.Module) Defines the type of layer to implement approx. Bayes computation.
@@ -44,19 +47,20 @@ class NeuralLinear(torch.nn.Module):
     """
     super().__init__()
     self.feature_extractor = nn.Sequential(
-      nn.Linear(X.shape[1], out_features),
+      nn.Linear(Z[:,:-1].shape[1], out_features),
       nn.BatchNorm1d(out_features),
       nn.ReLU(),
       nn.Linear(out_features, out_features),
       nn.BatchNorm1d(out_features),
       nn.ReLU()
       )
-
     self.linear = linear([out_features, 1])
-
+    X,Y = Z[:, :-1], Z[:, -1]
     self.x_train, self.y_train = torch.from_numpy(X), torch.from_numpy(Y)
-
-
+    self.normalize = True
+    if self.normalize:
+        self.output_mean = torch.FloatTensor([torch.mean(self.y_train)])
+        self.output_std = torch.FloatTensor([torch.std(self.y_train)])
 
   def forward(self, x):
     """
@@ -64,6 +68,7 @@ class NeuralLinear(torch.nn.Module):
     :param x: (torch.tensor) Inputs.
     :return: (torch.tensor) Predictive distribution (may be tuple)
     """
+    print('training set shape : ', self.x_train.shape, self.y_train.shape)
     return self.linear(self.encode(x), self.encode(self.x_train), self.y_train)
 
   def encode(self, x):
@@ -76,10 +81,9 @@ class NeuralLinear(torch.nn.Module):
       self.feature_extractor.eval()
     return self.feature_extractor(x)
 
-  def optimize(self, data, num_epochs=1000, batch_size=64, initial_lr=1e-2, weight_decay=1e-1, **kwargs):
+  def optimize(self, wts, pts, num_epochs=500, batch_size=64, initial_lr=1e-2, weight_decay=1e-1, **kwargs):
     """
     Internal functionality to train model
-    :param data: (Object) Training data
     :param num_epochs: (int) Number of epochs to train for
     :param batch_size: (int) Batch-size for training
     :param initial_lr: (float) Initial learning rate
@@ -93,34 +97,31 @@ class NeuralLinear(torch.nn.Module):
         {'params': weights, 'weight_decay': weight_decay},
         {'params': other},
       ], lr=initial_lr)
-
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, num_epochs, eta_min=1e-5)
     dataloader = DataLoader(
-        dataset=Dataset(data, 'train', transform=kwargs.get('transform', None)),
-        batch_size=batch_size,
-        shuffle=True,
-        drop_last=True
-      )
+            dataset=data.TensorDataset(wts, pts),
+            batch_size=batch_size,
+            shuffle=True,
+            drop_last=False
+        )
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, num_epochs, eta_min=1e-5)
     for epoch in range(num_epochs):
       scheduler.step()
       losses, performances = [], []
       self.train()
-      for (x, y) in dataloader:
+      for (w, p) in dataloader:
+        x,y=p[:,:-1],p[:,-1]
         optimizer.zero_grad()
         y_pred = self.forward(x)
-        step_loss = -self._compute_log_likelihood(y, y_pred)
+        step_loss = -self._compute_log_likelihood(y, y_pred, w)
         step_loss.backward()
         optimizer.step()
-
         performance = self._evaluate_performance(y, y_pred)
         losses.append(step_loss.cpu().item())
         performances.append(performance.cpu().item())
-
-        if epoch % 100 == 0 or epoch == num_epochs - 1:
+        if epoch % 10 == 0 or epoch == num_epochs - 1:
           print('#{} loss: {:.4f}, rmse: {:.4f}'.format(epoch, np.mean(losses), np.mean(performances)))
 
-
-  def test(self, data, **kwargs):
+  def test(self, test_data, **kwargs):
     """
     Test model
     :param data: (Object) Data to use for testing
@@ -128,22 +129,26 @@ class NeuralLinear(torch.nn.Module):
     :return: (np.array) Performance metrics evaluated for testing
     """
     print("Testing...")
-
-    test_bsz = len(data.index['test'])
-    losses, performances = self._evaluate(data, test_bsz, 'test', **kwargs)
-    print("predictive ll: {:.4f}, N: {}, rmse: {:.4f}".format(
-            -np.mean(losses), len(data.index['train']), np.mean(performances)))
+    test_bsz = len(test_data)
+    losses, performances = self._evaluate(test_data, test_bsz, **kwargs)
+    print("predictive ll: {:.4f}, rmse: {:.4f}".format(
+            -np.mean(losses), np.mean(performances)))
     return np.hstack(losses), np.hstack(performances)
 
-  def get_predictions(self, x, data):
+  def get_predictions(self, x, test_data):
     """
     Make predictions for data
     :param x: (torch.tensor) Observations to make predictions for
-    :param data: (Object) Data to use for making predictions
+    :param test_data: (Object) Data to use for making predictions
     :return: (np.array) Predictive distributions
     """
     self.eval()
-    dataloader = DataLoader(Dataset(data, 'prediction', x_star=x), batch_size=len(x), shuffle=False)
+    dataloader = DataLoader(
+                dataset=data.TensorDataset(test_data),
+                batch_size=len(test_data),
+                shuffle=True,
+                drop_last=False
+            )
     for (x, _) in dataloader:
       y_pred = self.forward(x)
       pred_mean, pred_var = y_pred
@@ -160,7 +165,6 @@ class NeuralLinear(torch.nn.Module):
     """
     if not self.normalize:
       return output
-
     return output * self.output_std + self.output_mean
 
   def _compute_expected_ll(self, x, theta):
@@ -175,7 +179,22 @@ class NeuralLinear(torch.nn.Module):
     z = (self.encode(x) @ theta)[:, None]
     return const - 0.5 / self.linear.y_var * (z ** 2 - 2 * pred_mean * z + pred_var + pred_mean ** 2)
 
-  def _compute_log_likelihood(self, y, y_pred):
+
+  def gaussian_log_density(self, inputs, mean, variance):
+    """
+    Compute the Gaussian log-density of a vector for a given distribution
+    :param inputs: (torch.tensor) Inputs for which log-pdf should be evaluated
+    :param mean: (torch.tensor) Mean of the Gaussian distribution
+    :param variance: (torch.tensor) Variance of the Gaussian distribution
+    :return: (torch.tensor) log-pdf of the inputs N(inputs; mean, variance)
+    """
+    d = inputs.shape[-1]
+    xc = inputs - mean
+    return -0.5 * (torch.sum((xc * xc) / variance, dim=-1)
+                   + torch.sum(torch.log(variance), dim=-1) + d * np.log(2*np.pi))
+
+
+  def _compute_log_likelihood(self, y, y_pred, w):
     """
     Compute log-likelihood of predictions
     :param y: (torch.tensor) Observations
@@ -183,16 +202,27 @@ class NeuralLinear(torch.nn.Module):
     :return: (torch.tensor) Log-likelihood of predictions
     """
     pred_mean, pred_variance = y_pred
-    return torch.sum(utils.gaussian_log_density(inputs=y, mean=pred_mean, variance=pred_variance), dim=0)
+    return torch.sum(w*self.gaussian_log_density(inputs=y, mean=pred_mean, variance=pred_variance), dim=0)
+
+  def rmse(self, y1, y2):
+    """
+    Compute root mean square error between two vectors
+    :param y1: (torch.tensor) first vector
+    :param y2: (torch.tensor) second vector
+    :return: (torch.scalar) root mean square error
+    """
+    print('predictions : ', y1[:10], 'true values : ', y2[:10])
+    return torch.sqrt(torch.mean((y1 - y2)**2))
+
 
   def _evaluate_performance(self, y, y_pred):
     """
     Evaluate performance metric for model
     """
     pred_mean, pred_variance = y_pred
-    return utils.rmse(self.get_unnormalized(pred_mean), self.get_unnormalized(y))
+    return self.rmse(self.get_unnormalized(pred_mean), self.get_unnormalized(y))
 
-  def _evaluate(self, data, batch_size, data_type='test', **kwargs):
+  def _evaluate(self, data, batch_size, **kwargs):
     """
     Evaluate model with data
     :param data: (Object) Data to use for evaluation
@@ -201,26 +231,17 @@ class NeuralLinear(torch.nn.Module):
     :param kwargs: (dict) Optional additional arguments for evaluation
     :return: (np.arrays) Performance metrics for model
     """
-
-    assert data_type in ['val', 'test']
     losses, performances = [], []
-
-    if data_type == 'val' and len(data.index['val']) == 0:
-      return losses, performances
-
-    gt.pause()
     self.eval()
     with torch.no_grad():
-      dataloader = DataLoader(
-            Dataset(data, data_type, transform=kwargs.get('transform', None)),
-              batch_size=batch_size, shuffle=True)
-      for (x, y) in dataloader:
+      dataloader = DataLoader(data, batch_size=batch_size, shuffle=False)
+      for p in dataloader:
+        x,y = p[:,:-1],p[:,-1]
         y_pred = self.forward(x)
         pred_mean, pred_variance = y_pred
-        loss = torch.sum(-utils.gaussian_log_density(y, pred_mean, pred_variance))
+        loss = torch.sum(-self.gaussian_log_density(y, pred_mean, pred_variance))
         avg_loss = loss / len(x)
         performance = self._evaluate_performance(y, y_pred)
         losses.append(avg_loss.cpu().item())
         performances.append(performance.cpu().item())
-    gt.resume()
     return losses, performances

@@ -4,7 +4,8 @@ from ..util.opt import nn_opt
 from .coreset import Coreset
 
 class SparseVICoreset(Coreset):
-  def __init__(self, data, ll_projector, n_subsample_select=None, n_subsample_opt=None, opt_itrs=100, step_sched=lambda i : 1./(1.+i), mup=None, Zmean=None, SigpInv=None, diagnostics=False,**kw):
+  def __init__(self, data, ll_projector, n_subsample_select=None, n_subsample_opt=None,
+              opt_itrs=100, step_sched=lambda i : 1./(1.+i), mup=None, Zmean=None, SigpInv=None, diagnostics=False, **kwargs):
     self.data = data
     self.ll_projector = ll_projector
     self.n_subsample_select = None if n_subsample_select is None else min(data.shape[0], n_subsample_select)
@@ -15,7 +16,7 @@ class SparseVICoreset(Coreset):
     self.SigpInv = SigpInv
     self.Zmean = Zmean
     self.diagnostics = diagnostics
-    super().__init__(**kw)
+    super().__init__(**kwargs)
 
   def _build(self, itrs, sz):
     if self.size()+itrs > sz:
@@ -80,3 +81,6 @@ class SparseVICoreset(Coreset):
 
   def error(self):
     return 0. #TODO: implement KL estimate
+
+  def update_encoder(self, nl):
+    self.encoder = nl

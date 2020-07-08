@@ -22,9 +22,9 @@ class BlackBoxProjector(Projector):
 
     def project(self, pts, grad=False):
         if self.encoder:
-          pts = pts.astype(np.float32)
-          pts = np.hstack((self.encoder.encode(torch.from_numpy(pts[:, :-1])).detach().numpy(), pts[:,-1][:,np.newaxis]))
-        lls = self.loglikelihood(pts, self.samples)
+          lls = self.loglikelihood(pts, self.samples, self.encoder)
+        else:
+          lls = self.loglikelihood(pts, self.samples)
         lls -= lls.mean(axis=1)[:,np.newaxis]
         if grad:
             if self.grad_loglikelihood is None:
