@@ -37,7 +37,7 @@ class BlackBoxProjector(Projector):
         self.samples = self.sampler(self.projection_dimension, wts, pts)
 
 class BetaBlackBoxProjector(Projector):
-    def __init__(self, sampler, projection_dimension, beta_likelihood, loglikelihood, beta_gradient):
+    def __init__(self, sampler, projection_dimension, beta_likelihood, loglikelihood, beta_gradient, **kwargs):
         self.projection_dimension = projection_dimension
         self.sampler = sampler
         self.beta_likelihood = beta_likelihood

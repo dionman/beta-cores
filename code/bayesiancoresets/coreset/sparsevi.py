@@ -61,8 +61,8 @@ class SparseVICoreset(Coreset):
       #expand and initialize storage for new coreset pt
       #need to double-check that f isn't in self.idcs, since the subsample may contain some of the coreset pts
       if f not in self.idcs:
-        self.wts.resize(self.wts.shape[0]+1)
-        self.idcs.resize(self.idcs.shape[0]+1)
+        self.wts.resize(self.wts.shape[0]+1, refcheck=False)
+        self.idcs.resize(self.idcs.shape[0]+1, refcheck=False)
         self.pts.resize((self.pts.shape[0]+1, self.data.shape[1]), refcheck=False)
         self.wts[-1] = 0.
         self.idcs[-1] = f
