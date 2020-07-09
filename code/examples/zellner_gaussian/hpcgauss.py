@@ -19,8 +19,9 @@ def linearize():
           args_dict[c] = (tr, nm, d) 
   return args_dict
 
+mapping = linearize()
+tr, nm, d = mapping[int(sys.argv[1])]
 np.random.seed(int(tr))
-
 
 results_fldr = 'results'
 if not os.path.exists(results_fldr):
