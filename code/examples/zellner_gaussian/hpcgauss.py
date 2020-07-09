@@ -9,9 +9,18 @@ sys.path.insert(1, os.path.join(sys.path[0], '../common'))
 import gaussian
 from gaussian import *
 
-nm = sys.argv[1]
-tr = sys.argv[2]
+def linearize():
+  args_dict = dict()
+  c = -1
+  for tr in range(10): # trial number
+    for nm in ["PRIOR", "RAND", "BCORES", "BPSVI", "SVI", "GIGAO", "GIGAR"]: # coreset method
+      for d in [20]: 
+          c += 1
+          args_dict[c] = (tr, nm, d) 
+  return args_dict
+
 np.random.seed(int(tr))
+
 
 results_fldr = 'results'
 if not os.path.exists(results_fldr):
@@ -29,9 +38,7 @@ i0 = 0.1 # starting learning rate
 BPSVI_step_sched = lambda m: lambda i : i0/(1.+i)
 SVI_step_sched = lambda i : i0/(1.+i)
 BCORES_step_sched = lambda i : i0/(1.+i)
-
 N = 5000  # number of data points
-d = 100  # number of dimensions
 
 mu0 = np.zeros(d)
 Sig0 = np.eye(d)
