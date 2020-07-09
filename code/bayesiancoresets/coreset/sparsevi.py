@@ -5,8 +5,7 @@ from .coreset import Coreset
 
 class SparseVICoreset(Coreset):
   def __init__(self, data, ll_projector, n_subsample_select=None, n_subsample_opt=None,
-              opt_itrs=100, step_sched=lambda i : 1./(1.+i), mup=None, Zmean=None, SigpInv=None, diagnostics=False,
-              wts=np.array([]), idcs=np.array([], dtype=np.int64), pts=np.array([]),
+              opt_itrs=100, step_sched=lambda i : 1./(1.+i), mup=None, SigpInv=None,
               **kwargs):
     self.data = data
     self.ll_projector = ll_projector
@@ -16,12 +15,7 @@ class SparseVICoreset(Coreset):
     self.opt_itrs = opt_itrs
     self.mup = mup
     self.SigpInv = SigpInv
-    self.Zmean = Zmean
-    self.diagnostics = diagnostics
     super().__init__(**kwargs)
-    self.wts = wts
-    self.idcs = idcs
-    self.pts = pts
 
   def _build(self, itrs, sz):
     if self.size()+itrs > sz:

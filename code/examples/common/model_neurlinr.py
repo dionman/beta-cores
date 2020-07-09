@@ -7,8 +7,7 @@ def load_data(name, data_dir):
   Return data from UCI sets
   :return: Inputs, outputs
   """
-  np.random.seed(seed)
-  if name in ['boston', 'concrete']:
+  if name in [ 'concrete']:
     data = np.array(pandas.read_excel('{}/{}.xls'.format(data_dir, name)))
   elif name in ['energy', 'power']:
     data = np.array(pandas.read_excel('{}/{}.xlsx'.format(data_dir, name)))
@@ -18,6 +17,9 @@ def load_data(name, data_dir):
     data = np.loadtxt('{}/{}.txt'.format(data_dir, name))
   elif name in ['wine']:
     data = np.array(pandas.read_csv('{}/{}.csv'.format(data_dir, name), delimiter=';'))
+  elif name in ['boston']:
+    from sklearn.datasets import load_boston
+    data = load_boston()
   elif name in ['year']:
     data = np.loadtxt('{}/{}.txt'.format(data_dir, name), delimiter=',')
   else:
@@ -25,6 +27,9 @@ def load_data(name, data_dir):
   if name in ['energy', 'naval']:  # dataset has 2 response values
     X = data[:, :-2]
     Y = data[:, -2:-1]  # pick first response value
+  elif name in ['boston']:
+    X = data['data']
+    Y = data['target'][:, np.newaxis]
   else:
     X = data[:, :-1]
     Y = data[:, -1:]

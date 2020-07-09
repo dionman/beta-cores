@@ -6,7 +6,6 @@ from torch.utils.data import DataLoader
 from torch.distributions.normal import Normal
 from torch.distributions.multivariate_normal import MultivariateNormal as MVN
 
-
 class BayesianRegressionDense(nn.Module):
   def __init__(self, shape, sigmasq=1., s=1.):
     """
@@ -39,7 +38,7 @@ class BayesianRegressionDense(nn.Module):
 
 ### MODELS ###
 class NeuralLinear(torch.nn.Module):
-  def __init__(self, Z, linear=BayesianRegressionDense, out_features=10, normalize=True):
+  def __init__(self, Z, linear=BayesianRegressionDense, out_features=30, normalize=True):
     """
     Neural linear module. Implements a deep feature extractor with an (approximate) Bayesian layer on top.
     :param linear: (nn.Module) Defines the type of layer to implement approx. Bayes computation.
@@ -88,11 +87,10 @@ class NeuralLinear(torch.nn.Module):
       self.feature_extractor.eval()
     return self.feature_extractor(x)
 
-  def optimize(self, wts, pts, num_epochs=1000, batch_size=128, initial_lr=1e-2, weight_decay=1e-1, **kwargs):
+  def optimize(self, wts, pts, num_epochs=1000, initial_lr=1e-2, weight_decay=1e-1, **kwargs):
     """
     Internal functionality to train model
     :param num_epochs: (int) Number of epochs to train for
-    :param batch_size: (int) Batch-size for training
     :param initial_lr: (float) Initial learning rate
     :param weight_decay: (float) Weight-decay parameter for deterministic weights
     :param kwargs: (dict) Optional additional arguments for optimization
@@ -100,10 +98,12 @@ class NeuralLinear(torch.nn.Module):
     """
     weights = [v for k, v in self.named_parameters() if k.endswith('weight')]
     other = [v for k, v in self.named_parameters() if k.endswith('bias')]
-    optimizer = torch.optim.Adam([
+    optimizer = torch.optim.Adagrad([
         {'params': weights, 'weight_decay': weight_decay},
         {'params': other},
       ], lr=initial_lr)
+    batch_size = self.get_batch_size(pts.shape[0])
+    print('batch size = ', batch_size)
     dataloader = DataLoader(
             dataset=data.TensorDataset(wts, pts),
             batch_size=batch_size,
@@ -127,6 +127,15 @@ class NeuralLinear(torch.nn.Module):
         performances.append(performance.cpu().item())
         #if epoch % 10 == 0 or epoch == num_epochs - 1:
         #  print('#{} loss: {:.4f}, rmse: {:.4f}'.format(epoch, np.mean(losses), np.mean(performances)))
+
+  def get_batch_size(self, num_points):
+    # computes the closest power of two that is smaller or equal than num_points/2
+    batch_sizes = 2**np.arange(10)
+    if num_points in batch_sizes:
+        return int(num_points / 2)
+    else:
+        return int(batch_sizes[np.sum((num_points / 2) > batch_sizes) - 1])
+
 
   def test(self, test_data, **kwargs):
     """
@@ -166,6 +175,25 @@ class NeuralLinear(torch.nn.Module):
         losses.append(avg_loss.cpu().item())
         performances.append(performance.cpu().item())
     return losses, performances
+
+  def _evaluate_prior(self, test_data, prior_mean, prior_variance, **kwargs):
+    print("Testing...")
+    test_bsz = len(test_data)
+    losses, performances = [], []
+    self.eval()
+    dataloader = DataLoader(test_data, batch_size=test_bsz, shuffle=False)
+    for p in dataloader:
+      x,y = p[:,:-1],p[:,-1]
+      prior_variance = prior_variance.unsqueeze_(-1)
+      y_pred = (prior_mean, prior_variance)
+      loss = torch.sum(-self.gaussian_log_density(y, prior_mean, prior_variance))
+      avg_loss = loss / len(x)
+      performance = self._evaluate_performance(y, y_pred)
+      losses.append(avg_loss.cpu().item())
+      performances.append(performance.cpu().item())
+    print("predictive ll: {:.4f}, rmse: {:.4f}".format(
+            -np.mean(losses), np.mean(performances)))
+    return np.hstack(losses), np.hstack(performances)
 
   def _evaluate_performance(self, y, y_pred):
     """

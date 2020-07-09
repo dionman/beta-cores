@@ -1,9 +1,12 @@
 #!/bin/bash
 
-for ID in {0..0}
-do
-    for alg in "SVI" #"BPSVI" "BCORES" "GIGAO" "GIGAR" "RAND"
+for tr in {0..0}
+  do
+  for dnm in  "boston" 
     do
-			python3 main.py $alg $ID
+    for alg in "PRIOR" #"SVI" #"BPSVI" "BCORES" "GIGAO" "GIGAR" "RAND"
+      do
+			   python3 main.py $dnm $alg $tr
     done
+  done
 done

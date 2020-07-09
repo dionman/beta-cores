@@ -6,8 +6,12 @@ class UniformSamplingCoreset(Coreset):
   def __init__(self, data, **kw):
     super().__init__(**kw)
     self.data = data
-    self.cts = []
-    self.ct_idcs = [] 
+    if 'wts' in kw: # if coreset has been initiliazed to dummy random subset
+      self.cts = [1]*len(self.idcs.tolist())
+      self.ct_idcs = self.idcs.tolist()
+    else:
+      self.cts = []
+      self.ct_idcs = []
 
   def reset(self):
     self.cts = []

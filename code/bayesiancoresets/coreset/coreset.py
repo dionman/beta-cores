@@ -5,13 +5,13 @@ from .. import util
 from ..util.errors import NumericalPrecisionError
 
 class Coreset(object):
-  def __init__(self, initial_sz=10):
+  def __init__(self, initial_sz=10, wts=np.array([]), idcs=np.array([], dtype=np.int64), pts=np.array([])):
     self.alg_name = self.__class__.__name__ + '-'+secrets.token_hex(3)
     self.log = logging.LoggerAdapter(logging.getLogger(), {"id" : self.alg_name})
     self.reached_numeric_limit = False
-    self.wts = np.array([])
-    self.idcs = np.array([], dtype=np.int64)
-    self.pts = np.array([])
+    self.wts = wts
+    self.idcs = idcs
+    self.pts = pts
 
   def reset(self):
     self.wts = np.array([])

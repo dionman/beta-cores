@@ -1,5 +1,5 @@
 from bokeh.models import FuncTickFormatter
-import bokeh.palettes 
+import bokeh.palettes
 import numpy as np
 
 
@@ -43,10 +43,26 @@ return ret;
 """)
 
 
+color_defaults = [
+    '#1f77b4',  # muted blue
+    '#d62728',  # brick red
+    '#ff7f0e',  # safety orange
+    '#2ca02c',  # cooked asparagus green
+    '#9467bd',  # muted purple
+    '#8c564b',  # chestnut brown
+    '#e377c2',  # raspberry yogurt pink
+    '#7f7f7f',  # middle gray
+    '#bcbd22',  # curry yellow-green
+    '#17becf'   # blue-teal
+]
+
+'''
 pal = bokeh.palettes.colorblind['Colorblind'][8]
 pl = [pal[0], pal[1], pal[3]]
 pl.extend(pal[4:8])
 pl.append('#d62728')
+'''
+pl = color_defaults
 pal = pl
 
 
@@ -93,4 +109,3 @@ def postprocess_plot(fig, legend_font_size, orientation='vertical', location='to
   fig.legend.spacing=5
   fig.xgrid.grid_line_color=None
   fig.ygrid.grid_line_color=None
-
