@@ -5,7 +5,9 @@ from .coreset import Coreset
 
 class SparseVICoreset(Coreset):
   def __init__(self, data, ll_projector, n_subsample_select=None, n_subsample_opt=None,
-              opt_itrs=100, step_sched=lambda i : 1./(1.+i), mup=None, Zmean=None, SigpInv=None, diagnostics=False, **kwargs):
+              opt_itrs=100, step_sched=lambda i : 1./(1.+i), mup=None, Zmean=None, SigpInv=None, diagnostics=False,
+              wts=np.array([]), idcs=np.array([], dtype=np.int64), pts=np.array([]),
+              **kwargs):
     self.data = data
     self.ll_projector = ll_projector
     self.n_subsample_select = None if n_subsample_select is None else min(data.shape[0], n_subsample_select)
@@ -17,6 +19,9 @@ class SparseVICoreset(Coreset):
     self.Zmean = Zmean
     self.diagnostics = diagnostics
     super().__init__(**kwargs)
+    self.wts = wts
+    self.idcs = idcs
+    self.pts = pts
 
   def _build(self, itrs, sz):
     if self.size()+itrs > sz:
@@ -64,7 +69,7 @@ class SparseVICoreset(Coreset):
       if f not in self.idcs:
         self.wts.resize(self.wts.shape[0]+1)
         self.idcs.resize(self.idcs.shape[0]+1)
-        self.pts.resize((self.pts.shape[0]+1, self.data.shape[1]))
+        self.pts.resize((self.pts.shape[0]+1, self.data.shape[1]), refcheck=False)
         self.wts[-1] = 0.
         self.idcs[-1] = f
         self.pts[-1] = self.data[f]
@@ -81,6 +86,3 @@ class SparseVICoreset(Coreset):
 
   def error(self):
     return 0. #TODO: implement KL estimate
-
-  def update_encoder(self, nl):
-    self.encoder = nl

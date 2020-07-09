@@ -55,12 +55,20 @@ class NeuralLinear(torch.nn.Module):
       nn.ReLU()
       )
     self.linear = linear([out_features, 1])
-    X,Y = Z[:, :-1], Z[:, -1]
+    X, Y = Z[:, :-1], Z[:, -1]
     self.x_train, self.y_train = torch.from_numpy(X), torch.from_numpy(Y)
     self.normalize = True
     if self.normalize:
         self.output_mean = torch.FloatTensor([torch.mean(self.y_train)])
         self.output_std = torch.FloatTensor([torch.std(self.y_train)])
+
+  def update_batch(self, Z):
+    X, Y = Z[:, :-1], Z[:, -1]
+    self.x_train, self.y_train = torch.from_numpy(X), torch.from_numpy(Y)
+    self.normalize = True
+    if self.normalize:
+      self.output_mean = torch.FloatTensor([torch.mean(self.y_train)])
+      self.output_std = torch.FloatTensor([torch.std(self.y_train)])
 
   def forward(self, x):
     """
@@ -68,7 +76,6 @@ class NeuralLinear(torch.nn.Module):
     :param x: (torch.tensor) Inputs.
     :return: (torch.tensor) Predictive distribution (may be tuple)
     """
-    print('training set shape : ', self.x_train.shape, self.y_train.shape)
     return self.linear(self.encode(x), self.encode(self.x_train), self.y_train)
 
   def encode(self, x):
@@ -81,7 +88,7 @@ class NeuralLinear(torch.nn.Module):
       self.feature_extractor.eval()
     return self.feature_extractor(x)
 
-  def optimize(self, wts, pts, num_epochs=500, batch_size=64, initial_lr=1e-2, weight_decay=1e-1, **kwargs):
+  def optimize(self, wts, pts, num_epochs=1000, batch_size=128, initial_lr=1e-2, weight_decay=1e-1, **kwargs):
     """
     Internal functionality to train model
     :param num_epochs: (int) Number of epochs to train for
@@ -118,8 +125,8 @@ class NeuralLinear(torch.nn.Module):
         performance = self._evaluate_performance(y, y_pred)
         losses.append(step_loss.cpu().item())
         performances.append(performance.cpu().item())
-        if epoch % 10 == 0 or epoch == num_epochs - 1:
-          print('#{} loss: {:.4f}, rmse: {:.4f}'.format(epoch, np.mean(losses), np.mean(performances)))
+        #if epoch % 10 == 0 or epoch == num_epochs - 1:
+        #  print('#{} loss: {:.4f}, rmse: {:.4f}'.format(epoch, np.mean(losses), np.mean(performances)))
 
   def test(self, test_data, **kwargs):
     """
@@ -135,27 +142,38 @@ class NeuralLinear(torch.nn.Module):
             -np.mean(losses), np.mean(performances)))
     return np.hstack(losses), np.hstack(performances)
 
-  def get_predictions(self, x, test_data):
-    """
-    Make predictions for data
-    :param x: (torch.tensor) Observations to make predictions for
-    :param test_data: (Object) Data to use for making predictions
-    :return: (np.array) Predictive distributions
-    """
-    self.eval()
-    dataloader = DataLoader(
-                dataset=data.TensorDataset(test_data),
-                batch_size=len(test_data),
-                shuffle=True,
-                drop_last=False
-            )
-    for (x, _) in dataloader:
-      y_pred = self.forward(x)
-      pred_mean, pred_var = y_pred
-      if self.normalize:
-        pred_mean, pred_var = self.get_unnormalized(pred_mean), self.output_std ** 2 * pred_var
 
-    return pred_mean.detach().cpu().numpy(), pred_var.detach().cpu().numpy()
+  def _evaluate(self, data, batch_size, **kwargs):
+    """
+    Evaluate model with data
+    :param data: (Object) Data to use for evaluation
+    :param batch_size: (int) Batch-size for evaluation procedure (memory issues)
+    :param data_type: (str) Data split to use for evaluation
+    :param kwargs: (dict) Optional additional arguments for evaluation
+    :return: (np.arrays) Performance metrics for model
+    """
+    losses, performances = [], []
+    self.eval()
+    with torch.no_grad():
+      dataloader = DataLoader(data, batch_size=batch_size, shuffle=False)
+      for p in dataloader:
+        x,y = p[:,:-1],p[:,-1]
+        y_pred = self.forward(x)
+        pred_mean, pred_variance = y_pred
+        loss = torch.sum(-self.gaussian_log_density(y, pred_mean, pred_variance))
+        avg_loss = loss / len(x)
+        performance = self._evaluate_performance(y, y_pred)
+        losses.append(avg_loss.cpu().item())
+        performances.append(performance.cpu().item())
+    return losses, performances
+
+  def _evaluate_performance(self, y, y_pred):
+    """
+    Evaluate performance metric for model
+    """
+    pred_mean, pred_variance = y_pred
+    return self.rmse(self.get_unnormalized(pred_mean), self.get_unnormalized(y))
+
 
   def get_unnormalized(self, output):
     """
@@ -166,18 +184,6 @@ class NeuralLinear(torch.nn.Module):
     if not self.normalize:
       return output
     return output * self.output_std + self.output_mean
-
-  def _compute_expected_ll(self, x, theta):
-    """
-    Compute expected log-likelihood for data
-    :param x: (torch.tensor) Inputs to compute likelihood for
-    :param theta: (torch.tensor) Theta parameter to use in likelihood computations
-    :return: (torch.tensor) Expected log-likelihood of inputs
-    """
-    pred_mean, pred_var = self.forward(x)
-    const = -0.5 * torch.log(2 * np.pi * self.linear.y_var)
-    z = (self.encode(x) @ theta)[:, None]
-    return const - 0.5 / self.linear.y_var * (z ** 2 - 2 * pred_mean * z + pred_var + pred_mean ** 2)
 
 
   def gaussian_log_density(self, inputs, mean, variance):
@@ -211,37 +217,4 @@ class NeuralLinear(torch.nn.Module):
     :param y2: (torch.tensor) second vector
     :return: (torch.scalar) root mean square error
     """
-    print('predictions : ', y1[:10], 'true values : ', y2[:10])
     return torch.sqrt(torch.mean((y1 - y2)**2))
-
-
-  def _evaluate_performance(self, y, y_pred):
-    """
-    Evaluate performance metric for model
-    """
-    pred_mean, pred_variance = y_pred
-    return self.rmse(self.get_unnormalized(pred_mean), self.get_unnormalized(y))
-
-  def _evaluate(self, data, batch_size, **kwargs):
-    """
-    Evaluate model with data
-    :param data: (Object) Data to use for evaluation
-    :param batch_size: (int) Batch-size for evaluation procedure (memory issues)
-    :param data_type: (str) Data split to use for evaluation
-    :param kwargs: (dict) Optional additional arguments for evaluation
-    :return: (np.arrays) Performance metrics for model
-    """
-    losses, performances = [], []
-    self.eval()
-    with torch.no_grad():
-      dataloader = DataLoader(data, batch_size=batch_size, shuffle=False)
-      for p in dataloader:
-        x,y = p[:,:-1],p[:,-1]
-        y_pred = self.forward(x)
-        pred_mean, pred_variance = y_pred
-        loss = torch.sum(-self.gaussian_log_density(y, pred_mean, pred_variance))
-        avg_loss = loss / len(x)
-        performance = self._evaluate_performance(y, y_pred)
-        losses.append(avg_loss.cpu().item())
-        performances.append(performance.cpu().item())
-    return losses, performances

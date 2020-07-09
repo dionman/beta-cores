@@ -30,9 +30,9 @@ def load_data(name, data_dir):
     Y = data[:, -1:]
   return (X, Y)
 
-def build_synthetic_dataset(N=2000, noise_std=0.1, D=20):
+def build_synthetic_dataset(N=2000, noise_std=0.1, D=40):
   d = D+1 # dimensionality of w
-  w = np.random.randn(d)
+  w = 10+np.random.randn(d)
   X = np.random.randn(N, d)
   X[:,-1] = 1.
   Y = (np.dot(X, w) + np.random.normal(0, noise_std, size=N))[:,np.newaxis]
@@ -54,13 +54,6 @@ def weighted_post(th0, Sig0inv, sigsq, z, w):
   X = z[:, :-1]
   Y = z[:, -1]
   LSigpInv = np.linalg.cholesky(Sig0inv + (w[:, np.newaxis]*X).T.dot(X)/sigsq)
-  LSigp = sl.solve_triangular(LSigpInv, np.eye(LSigpInv.shape[0]), lower=True, overwrite_b = True, check_finite = False)
-  mup = np.dot(LSigp.dot(LSigp.T),  np.dot(Sig0inv,th0) + (w[:, np.newaxis]*Y[:,np.newaxis]*X).sum(axis=0)/sigsq )
+  LSigp = sl.solve_triangular(LSigpInv, np.eye(LSigpInv.shape[0]), lower=True, overwrite_b=True, check_finite=False)
+  mup = np.dot(LSigp.dot(LSigp.T),  np.dot(Sig0inv,th0) + (w[:, np.newaxis]*Y[:,np.newaxis]*X).sum(axis=0)/sigsq)
   return mup, LSigp, LSigpInv
-
-
-def gaussian_KL(mu0, Sig0, mu1, Sig1inv):
-  t1 = np.dot(Sig1inv, Sig0).trace()
-  t2 = np.dot((mu1-mu0),np.dot(Sig1inv, mu1-mu0))
-  t3 = -np.linalg.slogdet(Sig1inv)[1] - np.linalg.slogdet(Sig0)[1]
-  return 0.5*(t1+t2+t3-mu0.shape[0])
