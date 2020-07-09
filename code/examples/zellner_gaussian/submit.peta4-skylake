@@ -17,7 +17,7 @@
 #! The skylake/skylake-himem nodes have 32 CPUs (cores) each.
 #SBATCH --ntasks=1
 #! How many many cores will be allocated per task? (for single core jobs always leave this at 1)
-#SBATCH --cpus-per-task=32
+#SBATCH --cpus-per-task=1
 #! How much wallclock time will be required?
 #SBATCH --time=00:30:00
 #! What types of email messages do you wish to receive?
