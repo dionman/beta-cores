@@ -44,6 +44,7 @@ class BetaBlackBoxProjector(Projector):
         self.loglikelihood = loglikelihood
         self.beta_gradient = beta_gradient
         self.update(np.array([]), np.array([]))
+        self.encoder = None 
         if 'nl' in kwargs: # encode pts to a learned feature space
             self.encoder = kwargs['nl']
 
