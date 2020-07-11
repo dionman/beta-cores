@@ -14,7 +14,7 @@ f_rate = str(sys.argv[5])
 
 plot_reverse_kl = True
 trials = np.arange(1, n_trials)
-nms = [('BCORES', 'Beta-CORES', pal[0]), ('BPSVI', 'PSVI', pal[1]), ('SVI', 'SparseVI', pal[2]), ('RAND', 'Uniform', pal[3]), ('GIGAO','GIGA (Optimal)', pal[4]), ('GIGAR','GIGA (Realistic)', pal[5])]
+nms = [('BCORES', 'Beta-CORES', pal[0]), ('BPSVI', 'PSVI', pal[7]), ('SVI', 'SparseVI', pal[4]), ('RAND', 'Uniform', pal[3])]
 pcsts = ['PSVI'] # pseudocoreset nameslist
 
 #plot the KL figure
@@ -25,6 +25,7 @@ preprocess_plot(fig, '32pt', False, True)
 for i, nm in enumerate(nms):
   kl = []
   sz = []
+  it = []
   for tr in trials:
     numTuple = (prfx, f_rate, nm[0], str(tr))
     if nm[0]=='BCORES':
@@ -39,7 +40,11 @@ for i, nm in enumerate(nms):
       sz.append(range(len(w_))[::plot_every])
     else:
       sz.append([np.count_nonzero(a) for a in w_[::plot_every]])
-  x = np.percentile(sz, 50, axis=0)
+    it.append(list(range(0,len(rklw_), plot_every)))
+  print(sz, it)
+  #x = np.percentile(sz, 50, axis=0)
+  x = np.percentile(it, 50, axis=0)
+  input()
   # HACK FOR REPRODUCING COLOURS OF NEURIPS PAPER:
   #assign PSVI to last colour of the pallete in order to maintain colouring of previous papers for baselines
   fig.line(x, np.percentile(kl, 50, axis=0), color=nm[-1], line_width=5, legend_label=nm[1])
