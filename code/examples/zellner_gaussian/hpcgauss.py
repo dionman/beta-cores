@@ -9,19 +9,32 @@ sys.path.insert(1, os.path.join(sys.path[0], '../common'))
 import gaussian
 from gaussian import *
 
+#def linearize():
+#  args_dict = dict()
+#  c = -1
+#  for tr in range(5): # trial number
+#    for nm in ["PRIOR", "RAND", "BCORES", "BPSVI", "SVI", "GIGAO", "GIGAR"]: # coreset method
+#      for d in [20]: 
+#        for f_rate in [0, 15, 30]:
+#          c += 1
+#          args_dict[c] = (tr, nm, d, f_rate) 
+#  return args_dict
+
 def linearize():
   args_dict = dict()
   c = -1
-  for tr in range(5): # trial number
-    for nm in ["PRIOR", "RAND", "BCORES", "BPSVI", "SVI", "GIGAO", "GIGAR"]: # coreset method
-      for d in [20]: 
-        for f_rate in [0, 15, 30]:
-          c += 1
-          args_dict[c] = (tr, nm, d, f_rate) 
+  for beta in [0.1, 0.5, 0.9, 1.]:
+    for tr in range(5): # trial number
+      for nm in ["BCORES"]: # coreset method
+        for d in [20]:
+          for f_rate in [0, 15, 30]:
+            c += 1
+            args_dict[c] = (tr, nm, d, f_rate, beta)
   return args_dict
 
+
 mapping = linearize()
-tr, nm, d, f_rate = mapping[int(sys.argv[1])]
+tr, nm, d, f_rate, beta = mapping[int(sys.argv[1])]
 #tr, nm, d, f_rate = mapping[0]
 np.random.seed(int(tr))
 
@@ -37,7 +50,7 @@ n_subsample_opt = 200
 n_subsample_select = 1000
 proj_dim = 200
 pihat_noise = 0.75
-i0 = 0.1 # starting learning rate
+i0 = 10. # starting learning rate
 BPSVI_step_sched = lambda m: lambda i : i0/(1.+i)
 SVI_step_sched = lambda i : i0/(1.+i)
 BCORES_step_sched = lambda i : i0/(1.+i)
@@ -113,7 +126,7 @@ bpsvi = bc.BatchPSVICoreset(X, prj_w, opt_itrs = BPSVI_opt_itrs, n_subsample_opt
                             step_sched = BPSVI_step_sched)
 bcoresvi = bc.BetaCoreset(X, prj_bw, opt_itrs = BCORES_opt_itrs, n_subsample_opt = n_subsample_opt,
                            n_subsample_select = n_subsample_select, step_sched = BCORES_step_sched,
-                           beta = .1, learn_beta=False)
+                           beta = beta, learn_beta=False)
 giga_optimal = bc.HilbertCoreset(X, prj_optimal)
 giga_realistic = bc.HilbertCoreset(X, prj_realistic)
 unif = bc.UniformSamplingCoreset(X)
@@ -177,7 +190,7 @@ for m in range(M+1):
   fklw[m] = gaussian.gaussian_KL(mup, Sigp, muw[m,:], LSigwInv.dot(LSigwInv.T))
   if nm=='BCORES': betas[m] = beta
 
-f = open(results_fldr+'/results_'+str(f_rate)+'_'+nm+'_'+str(tr)+'.pk', 'wb')
+f = open(results_fldr+'/results_'+str(beta)+'_'+str(f_rate)+'_'+nm+'_'+str(tr)+'.pk', 'wb')
 if nm=='BCORES':
   res = (X, mu0, Sig0, Sig, mup, Sigp, w, p, muw, Sigw, rklw, fklw, betas)
   print('betas : ', betas)
