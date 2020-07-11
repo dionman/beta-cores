@@ -157,7 +157,7 @@ else:
       p.append(pts)
     else:
       w.append(np.array([0.]))
-      p.append(np.zeros((1,Χcorrupted.shape[0])))
+      p.append(np.zeros((1, Χ.shape[0])))
 
 # computing kld and saving results
 muw = np.zeros((M+1, mu0.shape[0]))
