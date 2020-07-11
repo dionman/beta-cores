@@ -4,7 +4,7 @@
 #! Name of the job:
 #SBATCH -J gauss
 #! Which project should be charged:
-#SBATCH -A COMPUTERLAB-SL2-CPU
+#SBATCH -A MASCOLO-SL2-CPU
 #! Output filename:
 #! %A means slurm job ID and %a means array index
 #SBATCH --output=/home/dm754/rds/hpc-work/zellner_gaussian/outputs/%A_%a.out
