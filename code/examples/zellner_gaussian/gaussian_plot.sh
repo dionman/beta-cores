@@ -1,7 +1,7 @@
 #!/bin/bash
 
-n_trials=2
-plot_every=5
+n_trials=5
+plot_every=1
 fldr_plts='figs'
 fldr_res='results'
 for f_rate in 0 15 30

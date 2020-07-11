@@ -14,7 +14,7 @@ f_rate = str(sys.argv[5])
 
 plot_reverse_kl = True
 trials = np.arange(1, n_trials)
-nms = [('BPSVI', 'PSVI', pal[-1]), ('SVI', 'SparseVI', pal[-2]), ('RAND', 'Uniform', pal[-3]), ('GIGAO','GIGA (Optimal)', pal[-4]), ('GIGAR','GIGA (Realistic)', pal[-5])]
+nms = [('BCORES', 'Beta-CORES', pal[0]), ('BPSVI', 'PSVI', pal[1]), ('SVI', 'SparseVI', pal[2]), ('RAND', 'Uniform', pal[3]), ('GIGAO','GIGA (Optimal)', pal[4]), ('GIGAR','GIGA (Realistic)', pal[5])]
 pcsts = ['PSVI'] # pseudocoreset nameslist
 
 #plot the KL figure
@@ -27,7 +27,10 @@ for i, nm in enumerate(nms):
   sz = []
   for tr in trials:
     numTuple = (prfx, f_rate, nm[0], str(tr))
-    x_, mu0_, Sig0_, Sig_, mup_, Sigp_, w_, p_, muw_, Sigw_, rklw_, fklw_ = np.load(os.path.join(prfx, '_'.join(numTuple)+'.pk'), allow_pickle=True)
+    if nm[0]=='BCORES':
+      x_, mu0_, Sig0_, Sig_, mup_, Sigp_, w_, p_, muw_, Sigw_, rklw_, fklw_, beta_ = np.load(os.path.join(prfx, '_'.join(numTuple)+'.pk'), allow_pickle=True)
+    else:
+      x_, mu0_, Sig0_, Sig_, mup_, Sigp_, w_, p_, muw_, Sigw_, rklw_, fklw_ = np.load(os.path.join(prfx, '_'.join(numTuple)+'.pk'), allow_pickle=True)
     if plot_reverse_kl:
       kl.append(rklw_[::plot_every])
     else:
@@ -39,8 +42,8 @@ for i, nm in enumerate(nms):
   x = np.percentile(sz, 50, axis=0)
   # HACK FOR REPRODUCING COLOURS OF NEURIPS PAPER:
   #assign PSVI to last colour of the pallete in order to maintain colouring of previous papers for baselines
-  fig.line(x, np.percentile(kl, 50, axis=0), color=nm[-1], line_width=5, legend=nm[1])
-  fig.patch(x = np.hstack((x, x[::-1])), y = np.hstack((np.percentile(kl, 75, axis=0), np.percentile(kl, 25, axis=0)[::-1])), color=nm[-1], fill_alpha=0.4, legend=nm[1])
+  fig.line(x, np.percentile(kl, 50, axis=0), color=nm[-1], line_width=5, legend_label=nm[1])
+  fig.patch(x = np.hstack((x, x[::-1])), y = np.hstack((np.percentile(kl, 75, axis=0), np.percentile(kl, 25, axis=0)[::-1])), color=nm[-1], fill_alpha=0.4, legend_label=nm[1])
 
 postprocess_plot(fig, '30pt', location='bottom_right', glyph_width=40)
 fig.legend.background_fill_alpha=0.
