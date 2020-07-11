@@ -22,6 +22,7 @@ def linearize():
 
 mapping = linearize()
 tr, nm, d, f_rate = mapping[int(sys.argv[1])]
+#tr, nm, d, f_rate = mapping[0]
 np.random.seed(int(tr))
 
 results_fldr = '/home/dm754/rds/hpc-work/zellner_gaussian/results'
@@ -52,12 +53,14 @@ Siginv = np.linalg.inv(Sig)
 SigLInv = np.linalg.inv(SigL)
 logdetSig = np.linalg.slogdet(Sig)[1]
 X = np.random.multivariate_normal(th, Sig, N)
-# introduce data corruption to f_rate % of the points
+# introduce data corruption to f_rate % of the points and
+# compute true posterior on the clean part of the dataset 
 num_f = int(float(f_rate)/100.*N)
 corrupt_shift = 9
-if num_f>0: X[-num_f:,:] = np.random.multivariate_normal(th+corrupt_shift, Sig, int(num_f))
-# compute true posterior on the clean part of the dataset 
-mup, LSigp, LSigpInv = gaussian.weighted_post(mu0, Sig0inv, Siginv, X[:-num_f,:], np.ones(X[:-num_f,:].shape[0]))
+if num_f>0: 
+  X[-num_f:,:] = np.random.multivariate_normal(th+corrupt_shift, Sig, int(num_f))
+  mup, LSigp, LSigpInv = gaussian.weighted_post(mu0, Sig0inv, Siginv, X[:-num_f,:], np.ones(X[:-num_f,:].shape[0]))
+else: mup, LSigp, LSigpInv = gaussian.weighted_post(mu0, Sig0inv, Siginv, X, np.ones(X.shape[0]))
 Sigp = LSigp.dot(LSigp.T)
 SigpInv = LSigpInv.dot(LSigpInv.T)
 
@@ -159,7 +162,7 @@ else:
       p.append(pts)
     else:
       w.append(np.array([0.]))
-      p.append(np.zeros((1, Χ.shape[0])))
+      p.append(np.zeros((1, X.shape[1])))
 
 # computing kld and saving results
 muw = np.zeros((M+1, mu0.shape[0]))
