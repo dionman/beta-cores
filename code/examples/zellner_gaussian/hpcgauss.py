@@ -55,8 +55,9 @@ X = np.random.multivariate_normal(th, Sig, N)
 # introduce data corruption to f_rate % of the points
 num_f = int(float(f_rate)/100.*N)
 corrupt_shift = 9
-X[-num_f:,:] = np.random.multivariate_normal(th+corrupt_shift, Sig, int(num_f))
-mup, LSigp, LSigpInv = gaussian.weighted_post(mu0, Sig0inv, Siginv, X[:-num_f,:], np.ones(X[:-num_f,:].shape[0])) # true posterior on uncorrupted dataset
+if num_f>0: X[-num_f:,:] = np.random.multivariate_normal(th+corrupt_shift, Sig, int(num_f))
+# compute true posterior on the clean part of the dataset 
+mup, LSigp, LSigpInv = gaussian.weighted_post(mu0, Sig0inv, Siginv, X[:-num_f,:], np.ones(X[:-num_f,:].shape[0]))
 Sigp = LSigp.dot(LSigp.T)
 SigpInv = LSigpInv.dot(LSigpInv.T)
 
