@@ -54,7 +54,8 @@ logdetSig = np.linalg.slogdet(Sig)[1]
 X = np.random.multivariate_normal(th, Sig, N)
 # introduce data corruption to f_rate % of the points
 num_f = int(float(f_rate)/100.*N)
-X[-num_f:,:] = np.random.multivariate_normal(th+20, Sig, int(num_f))
+corrupt_shift = 9
+X[-num_f:,:] = np.random.multivariate_normal(th+corrupt_shift, Sig, int(num_f))
 mup, LSigp, LSigpInv = gaussian.weighted_post(mu0, Sig0inv, Siginv, X[:-num_f,:], np.ones(X[:-num_f,:].shape[0])) # true posterior on uncorrupted dataset
 Sigp = LSigp.dot(LSigp.T)
 SigpInv = LSigpInv.dot(LSigpInv.T)
