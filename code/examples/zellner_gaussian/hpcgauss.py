@@ -4,7 +4,7 @@ import os, sys
 sys.path.insert(1, os.path.join(sys.path[0], '../..')) # read library from local folder: can be removed if it's installed systemwide
 import bayesiancoresets as bc
 from scipy.stats import multivariate_normal
-#make it so we can import models/etc from parent folder
+# make it so we can import models/etc from parent folder
 sys.path.insert(1, os.path.join(sys.path[0], '../common'))
 import gaussian
 from gaussian import *
@@ -12,18 +12,19 @@ from gaussian import *
 def linearize():
   args_dict = dict()
   c = -1
-  for tr in range(10): # trial number
+  for tr in range(5): # trial number
     for nm in ["PRIOR", "RAND", "BCORES", "BPSVI", "SVI", "GIGAO", "GIGAR"]: # coreset method
       for d in [20]: 
+        for f_rate in [0, 15, 30]:
           c += 1
-          args_dict[c] = (tr, nm, d) 
+          args_dict[c] = (tr, nm, d, f_rate) 
   return args_dict
 
 mapping = linearize()
-tr, nm, d = mapping[int(sys.argv[1])]
+tr, nm, d, f_rate = mapping[int(sys.argv[1])]
 np.random.seed(int(tr))
 
-results_fldr = 'results'
+results_fldr = '/home/dm754/rds/hpc-work/zellner_gaussian/results'
 if not os.path.exists(results_fldr):
   os.mkdir(results_fldr)
 
@@ -43,23 +44,20 @@ N = 5000  # number of data points
 
 mu0 = np.zeros(d)
 Sig0 = np.eye(d)
-Sig = 500*np.eye(d)
+Sig = np.eye(d)
 SigL = np.linalg.cholesky(Sig)
-th = np.zeros(d)
+th = np.ones(d)
 Sig0inv = np.linalg.inv(Sig0)
 Siginv = np.linalg.inv(Sig)
 SigLInv = np.linalg.inv(SigL)
 logdetSig = np.linalg.slogdet(Sig)[1]
 X = np.random.multivariate_normal(th, Sig, N)
-
-mup, LSigp, LSigpInv = gaussian.weighted_post(mu0, Sig0inv, Siginv, X, np.ones(X.shape[0])) # true posterior
+# introduce data corruption to f_rate % of the points
+num_f = int(float(f_rate)/100.*N)
+X[-num_f:,:] = np.random.multivariate_normal(th+20, Sig, int(num_f))
+mup, LSigp, LSigpInv = gaussian.weighted_post(mu0, Sig0inv, Siginv, X[:-num_f,:], np.ones(X[:-num_f,:].shape[0])) # true posterior on uncorrupted dataset
 Sigp = LSigp.dot(LSigp.T)
 SigpInv = LSigpInv.dot(LSigpInv.T)
-
-Xoutliers1 = np.random.multivariate_normal(th+200, 0.5*Sig, int(N/50.))
-Xoutliers2 = np.random.multivariate_normal(th+150, 0.1*Sig, int(N/50.))
-Xoutliers3 = np.random.multivariate_normal(th, 10*Sig, int(N/10.))
-Xcorrupted = np.concatenate((X, Xoutliers1, Xoutliers2, Xoutliers3))
 
 #create function to output log_likelihood given param   samples
 print('Creating log-likelihood function')
@@ -95,7 +93,7 @@ print('Creating black box projector for sampling from coreset posterior')
 def sampler_w(sz, wts, pts, diag=False):
   if pts.shape[0] == 0:
     wts = np.zeros(1)
-    pts = np.zeros((1, Xcorrupted.shape[1]))
+    pts = np.zeros((1, X.shape[1]))
   muw, LSigw, LSigwInv = weighted_post(mu0, Sig0inv, Siginv, pts, wts)
   return muw + np.random.randn(sz, muw.shape[0]).dot(LSigw.T)
 
@@ -104,16 +102,16 @@ prj_bw = bc.BetaBlackBoxProjector(sampler_w, proj_dim, beta_likelihood, log_like
 
 #create coreset construction objects
 print('Creating coreset construction objects')
-sparsevi = bc.SparseVICoreset(Xcorrupted, prj_w, opt_itrs = SVI_opt_itrs, n_subsample_opt = n_subsample_opt,
+sparsevi = bc.SparseVICoreset(X, prj_w, opt_itrs = SVI_opt_itrs, n_subsample_opt = n_subsample_opt,
                               n_subsample_select = n_subsample_select, step_sched = SVI_step_sched)
-bpsvi = bc.BatchPSVICoreset(Xcorrupted, prj_w, opt_itrs = BPSVI_opt_itrs, n_subsample_opt = n_subsample_opt,
+bpsvi = bc.BatchPSVICoreset(X, prj_w, opt_itrs = BPSVI_opt_itrs, n_subsample_opt = n_subsample_opt,
                             step_sched = BPSVI_step_sched)
-bcoresvi = bc.BetaCoreset(Xcorrupted, prj_bw, opt_itrs = BCORES_opt_itrs, n_subsample_opt = n_subsample_opt,
+bcoresvi = bc.BetaCoreset(X, prj_bw, opt_itrs = BCORES_opt_itrs, n_subsample_opt = n_subsample_opt,
                            n_subsample_select = n_subsample_select, step_sched = BCORES_step_sched,
                            beta = .1, learn_beta=False)
-giga_optimal = bc.HilbertCoreset(Xcorrupted, prj_optimal)
-giga_realistic = bc.HilbertCoreset(Xcorrupted, prj_realistic)
-unif = bc.UniformSamplingCoreset(Xcorrupted)
+giga_optimal = bc.HilbertCoreset(X, prj_optimal)
+giga_realistic = bc.HilbertCoreset(X, prj_realistic)
+unif = bc.UniformSamplingCoreset(X)
 
 algs = {'BCORES': bcoresvi,
         'BPSVI': bpsvi,
@@ -127,7 +125,7 @@ alg = algs[nm]
 print('Building coreset')
 #build coresets
 w = [np.array([0.])]
-p = [np.zeros((1, Xcorrupted.shape[1]))]
+p = [np.zeros((1, X.shape[1]))]
 
 def build_per_m(m): # construction in parallel for different coreset sizes used in BPSVI
   print('building for m=', m)
@@ -159,7 +157,7 @@ else:
       p.append(pts)
     else:
       w.append(np.array([0.]))
-      p.append(np.zeros((1,Y.shape[0])))
+      p.append(np.zeros((1,Χcorrupted.shape[0])))
 
 # computing kld and saving results
 muw = np.zeros((M+1, mu0.shape[0]))
@@ -174,12 +172,12 @@ for m in range(M+1):
   fklw[m] = gaussian.gaussian_KL(mup, Sigp, muw[m,:], LSigwInv.dot(LSigwInv.T))
   if nm=='BCORES': betas[m] = beta
 
-f = open('results/results_'+nm+'_'+str(tr)+'.pk', 'wb')
+f = open(results_fldr+'/results_'+str(f_rate)+'_'+nm+'_'+str(tr)+'.pk', 'wb')
 if nm=='BCORES':
-  res = (Xcorrupted, mu0, Sig0, Sig, mup, Sigp, w, p, muw, Sigw, rklw, fklw, betas)
+  res = (X, mu0, Sig0, Sig, mup, Sigp, w, p, muw, Sigw, rklw, fklw, betas)
   print('betas : ', betas)
 else:
-  res = (Xcorrupted, mu0, Sig0, Sig, mup, Sigp, w, p, muw, Sigw, rklw, fklw)
+  res = (X, mu0, Sig0, Sig, mup, Sigp, w, p, muw, Sigw, rklw, fklw)
 print('rklw :', rklw)
 pk.dump(res, f)
 f.close()
