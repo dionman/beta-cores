@@ -19,7 +19,7 @@ if not os.path.exists(fldr_figs):
   os.mkdir(fldr_figs)
 plot_reverse_kl = True
 trials = np.arange(1, n_trials)
-nms = [('BCORES', 'Beta-CORES', pal[0]), ('BPSVI', 'PSVI', pal[7]), ('SVI', 'SparseVI', pal[4]), ('RAND', 'Uniform', pal[3])]
+nms = [('BCORES', 'β-Cores', pal[0]), ('BPSVI', 'PSVI', pal[7]), ('SVI', 'SparseVI', pal[4]), ('RAND', 'Uniform', pal[3])]
 pcsts = ['PSVI'] # pseudocoreset nameslist
 
 #plot the KL figure
