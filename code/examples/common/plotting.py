@@ -1,5 +1,6 @@
 from bokeh.models import FuncTickFormatter
 import bokeh.palettes
+from bokeh.models import Label
 import numpy as np
 
 
@@ -72,20 +73,19 @@ def plot_gaussian(plot, mup, Sigp, Sig, color, dotsize, linewidth, dotalpha, lin
   t = np.linspace(0., 2*np.pi, 100)
   t = np.array([np.cos(t), np.sin(t)])
   t = 3*np.linalg.cholesky(Sigp+Sig).dot(t) + mup[:, np.newaxis]
-  plot.line(t[0, :], t[1, :], color=color, line_width=linewidth, alpha=linealpha, line_dash=line_dash, legend=name)
+  plot.line(t[0, :], t[1, :], color=color, line_width=linewidth, alpha=linealpha, line_dash=line_dash, legend_label=name)
 
 def plot_meanstd(plot, x, ys, color, linewidth, alpha, line_dash, name):
-  plot.line(x, ys.mean(axis=0), color=color, line_width=linewidth, line_dash=line_dash, legend=nm)
+  plot.line(x, ys.mean(axis=0), color=color, line_width=linewidth, line_dash=line_dash, legend_label=nm)
   plot.patch(np.hstack((x, x[::-1])), np.hstack(( ys.mean(axis=0)-ys.std(axis=0), (ys.mean(axis=0)+ys.std(axis=0))[::-1] )), color=color, line_width=linewidth/2, line_dash=line_dash, alpha=alpha, legend=nm)
 
 def plot_medianquartiles(plot, x, ys, color, linewidth, alpha, line_dash, name):
   ys25 = np.percentile(ys, 49, axis=0)
   ys50 = np.percentile(ys, 50, axis=0)
   ys75 = np.percentile(ys, 51, axis=0)
-  plot.line(x, ys25, color=color, line_width=linewidth, line_dash=line_dash, legend=nm)
-  plot.line(x, ys50, color=color, line_width=linewidth, line_dash=line_dash, legend=nm)
-  plot.line(x, ys75, color=color, line_width=linewidth, line_dash=line_dash, legend=nm)
-  #plot.patch(np.hstack((x, x[::-1])), np.hstack(( ys25, ys75[::-1] )), color=color, line_width=linewidth/2, line_dash=line_dash, alpha=alpha, legend=nm)
+  plot.line(x, ys25, color=color, line_width=linewidth, line_dash=line_dash, legend_label=nm)
+  plot.line(x, ys50, color=color, line_width=linewidth, line_dash=line_dash, legend_label=nm)
+  plot.line(x, ys75, color=color, line_width=linewidth, line_dash=line_dash, legend_label=nm)
 
 
 def preprocess_plot(fig, axis_font_size, log_scale_x, log_scale_y):
@@ -109,3 +109,8 @@ def postprocess_plot(fig, legend_font_size, orientation='vertical', location='to
   fig.legend.spacing=5
   fig.xgrid.grid_line_color=None
   fig.ygrid.grid_line_color=None
+
+
+def addm(fig, M, legend_font_size='72pt',  x=-13, y=0):
+  mytext = Label(x=x, y=y, text='M='+str(M),text_font_size='72pt', text_font='helvetica', text_font_style='bold')
+  fig.add_layout(mytext)
