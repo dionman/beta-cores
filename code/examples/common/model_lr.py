@@ -35,6 +35,15 @@ def log_likelihood(z, th):
   m[np.logical_not(idcs)] = -m[np.logical_not(idcs)]
   return m
 
+def beta_likelihood(z, th, beta):
+  z = np.atleast_2d(z)
+  th = np.atleast_2d(th)
+  m = -z.dot(th.T)
+  idcs = m < 100
+  m[idcs] = -(1./beta*(1+np.exp(m[idcs]))**(-beta) - 1./(beta+1.)*((1+np.exp(m[idcs]))**(-beta-1.) + (1+np.exp(-m[idcs]))**(-beta-1.)))
+  m[np.logical_not(idcs)] = -m[np.logical_not(idcs)]
+  return m
+
 def log_prior(th):
   th = np.atleast_2d(th)
   return -0.5*th.shape[1]*np.log(2.*np.pi) - 0.5*(th**2).sum(axis=1)
@@ -78,7 +87,7 @@ def hess_th_log_likelihood(z, th):
 
 def hess_th_log_prior(th):
   th = np.atleast_2d(th)
-  return np.tile(-np.eye(th.shape[1]), (th.shape[0], 1, 1)) 
+  return np.tile(-np.eye(th.shape[1]), (th.shape[0], 1, 1))
 
 def hess_th_log_joint(z, th, wts):
   return hess_th_log_prior(th) + (wts[:, np.newaxis, np.newaxis, np.newaxis]*hess_th_log_likelihood(z, th)).sum(axis=0)
@@ -94,8 +103,7 @@ def diag_hess_th_log_likelihood(z, th):
 
 def diag_hess_th_log_prior(th):
   th = np.atleast_2d(th)
-  return np.tile(-np.ones(th.shape[1]), (th.shape[0], 1)) 
+  return np.tile(-np.ones(th.shape[1]), (th.shape[0], 1))
 
 def diag_hess_th_log_joint(z, th, wts):
   return diag_hess_th_log_prior(th) + (wts[:, np.newaxis, np.newaxis]*diag_hess_th_log_likelihood(z, th)).sum(axis=0)
-
