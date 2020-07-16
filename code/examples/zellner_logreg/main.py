@@ -6,21 +6,51 @@ sys.path.insert(1, os.path.join(sys.path[0], '../..'))
 import bayesiancoresets as bc
 #make it so we can import models/etc from parent folder
 sys.path.insert(1, os.path.join(sys.path[0], '../common'))
-from mcmc import sampler
 import gaussian
 from scipy.optimize import minimize, nnls
 import scipy.linalg as sl
 from model_lr import *
+import pystan
 
-riemann_coresets = ['BPSVI', 'SVI', 'BCORES']
 nm = sys.argv[1]
 dnm = sys.argv[2]
 ID = sys.argv[3]
-stan_samples = (sys.argv[4]=="True") # use stan for true posterior sampling
-samplediag = (sys.argv[5]=="True") # diagonal Gaussian assumption for posterior sampling
-graddiag = (sys.argv[6]=="True") # diagonal Gaussian assumption for coreset sampler
-if nm in riemann_coresets: i0 = float(sys.argv[7])
+graddiag = (sys.argv[4]=="True") # diagonal Gaussian assumption for coreset sampler
+riemann_coresets = ['BPSVI', 'SVI', 'BCORES']
+if nm in riemann_coresets: i0 = float(sys.argv[5])
+f_rate = float(sys.argv[6])
 np.random.seed(int(ID))
+
+weighted_logistic_code = """
+data {
+  int<lower=0> N; // number of observations
+  int<lower=0> d; // dimensionality of x
+  matrix[N,d] x; // inputs
+  int<lower=0,upper=1> y[N]; // outputs in {0, 1}
+  vector[N] w; // weights
+}
+parameters {
+  real theta0; // intercept
+  vector[d] theta; // logreg params
+}
+model {
+  theta0 ~ normal(0, 1);
+  theta ~ normal(0, 1);
+  for(n in 1:N){
+    target += w[n]*bernoulli_logit_lpmf(y[n]| theta0 + x[n]*theta);
+  }
+}
+"""
+
+if not os.path.exists('pystan_model_logistic.pk'):
+  sml = pystan.StanModel(model_code=weighted_logistic_code)
+  f = open('pystan_model_logistic.pk','wb')
+  pk.dump(sml, f)
+  f.close()
+else:
+  f = open('pystan_model_logistic.pk','rb')
+  sml = pk.load(f)
+  f.close()
 
 #computes the Laplace approximation N(mu, Sig) to the posterior with weights wts
 def get_laplace(wts, Z, mu0, diag=False):
@@ -60,61 +90,23 @@ BCORES_step_sched = lambda itr : i0/(1.+itr)
 n_subsample_opt = 200
 n_subsample_select = 1000
 projection_dim = 100 #random projection dimension
-pihat_noise = .75 #noise level (relative) for corrupting pihat
 SVI_opt_itrs = 500
 BPSVI_opt_itrs = 500
 BCORES_opt_itrs = 500
+sz = 1000
 ###############################
 
 print('Loading dataset '+dnm)
-Z, Zt, D = load_data('../data/'+dnm+'.npz')
-if not os.path.exists('results/'):
-  os.mkdir('results')
-
-N_samples=10000
-if not stan_samples: # use laplace approximation (save, load from results/)
-  if not os.path.exists('results/'+dnm+'_samples.npy'):
-    print('sampling using laplace')
-    mup_laplace, LSigp_laplace, LSigpInv_laplace = get_laplace(np.ones(Z.shape[0]), Z, Z.mean(axis=0)[:D], diag=samplediag)
-    samples_laplace = mup_laplace + np.random.randn(N_samples, mup_laplace.shape[0]).dot(LSigp_laplace.T)
-    np.save(os.path.join('results/'+dnm+'_samples.npy'), samples_laplace)
-  else:
-    print('Loading posterior samples for '+dnm)
-  samples = np.load('results/'+dnm+'_samples.npy', allow_pickle=True)
-else: # use stan sampler (save, load from results/pystan_samples/)
-  if not os.path.exists('results/'+dnm+'_samples.npy'):
-    print('No MCMC samples found -- running STAN')
-    sampler(dnm, True, '../data/', 'results/pystan_samples/', N_samples)
-  else:
-    print('Loading posterior samples for '+dnm)
-  samples = np.load('results/'+dnm+'_samples.npy', allow_pickle=True)
-samples = np.hstack((samples[:, 1:], samples[:, 0][:,np.newaxis]))
-
-#fit a gaussian to the posterior samples
-#used for pihat computation for Hilbert coresets with noise to simulate uncertainty in a good pihat
-mup = samples.mean(axis=0)
-Sigp = np.cov(samples, rowvar=False)
-LSigp = np.linalg.cholesky(Sigp)
-LSigpInv = sl.solve_triangular(LSigp, np.eye(LSigp.shape[0]), lower=True, overwrite_b=True, check_finite=False)
-print('posterior fitting done')
-
+X, Y, Xt, Yt = load_data('../data/'+dnm+'.npz') # read train and test data
+X, Y, Z, x_mean, x_std = std_cov(X, Y) # standardize covariates
+#X, Y = perturb(X, Y, f_rate=f_rate)# corrupt datapoints
+D = X.shape[1]
+M = X.shape[0]
 #create the prior -- also used for the above purpose
-mu0 = np.zeros(mup.shape[0])
-Sig0 = np.eye(mup.shape[0])
-
-#get pihat via interpolation between prior/posterior + noise
-#uniformly smooth between prior and posterior
-U = np.random.rand()
-muhat = U*mup + (1.-U)*mu0
-Sighat = U*Sigp + (1.-U)*Sig0
-#now corrupt the smoothed pihat
-muhat += pihat_noise*np.sqrt((muhat**2).sum())*np.random.randn(muhat.shape[0])
-Sighat *= np.exp(-2.*pihat_noise*np.fabs(np.random.randn()))
-LSighat = np.linalg.cholesky(Sighat)
+mu0 = np.zeros(D)
+Sig0 = np.eye(D)
 
 print('Building projectors')
-sampler_optimal = lambda sz, w, pts : mup + np.random.randn(sz, mup.shape[0]).dot(LSigp.T)
-sampler_realistic = lambda sz, w, pts : muhat + np.random.randn(sz, muhat.shape[0]).dot(LSighat.T)
 def sampler_w(sz, w, pts, diag=graddiag):
   if pts.shape[0] == 0:
     w = np.zeros(1)
@@ -123,10 +115,6 @@ def sampler_w(sz, w, pts, diag=graddiag):
   return muw + np.random.randn(sz, muw.shape[0]).dot(LSigw.T)
 
 grad_beta = lambda x, th, beta : gaussian_beta_gradient(x, th, beta, Siginv, logdetSig)
-
-
-prj_optimal = bc.BlackBoxProjector(sampler_optimal, projection_dim, log_likelihood, grad_z_log_likelihood)
-prj_realistic = bc.BlackBoxProjector(sampler_realistic, projection_dim, log_likelihood, grad_z_log_likelihood)
 prj_w = bc.BlackBoxProjector(sampler_w, projection_dim, log_likelihood, grad_z_log_likelihood)
 prj_bw = bc.BetaBlackBoxProjector(sampler_w, projection_dim, beta_likelihood, beta_likelihood, grad_beta)
 
@@ -134,10 +122,10 @@ print('Creating coresets object')
 #create coreset construction objects
 
 unif = bc.UniformSamplingCoreset(Z)
-sparsevi = bc.SparseVICoreset(Z, prj_w, opt_itrs=SVI_opt_itrs, n_subsample_opt = n_subsample_opt,
+sparsevi = bc.SparseVICoreset(Z, prj_w, opt_itrs = SVI_opt_itrs, n_subsample_opt = n_subsample_opt,
                               n_subsample_select = n_subsample_select, step_sched = SVI_step_sched)
 bpsvi = bc.BatchPSVICoreset(Z, prj_w, opt_itrs = BPSVI_opt_itrs, n_subsample_opt = n_subsample_opt,
-                            step_sched = BPSVI_step_sched, mup=mup, SigpInv=LSigpInv.dot(LSigpInv.T))
+                            step_sched = BPSVI_step_sched)
 bcoresvi = bc.BetaCoreset(Z, prj_bw, opt_itrs = BCORES_opt_itrs, n_subsample_opt = n_subsample_opt,
                            n_subsample_select = n_subsample_select, step_sched = BCORES_step_sched,
                            beta = .1, learn_beta=False)
@@ -151,63 +139,73 @@ alg = algs[nm]
 print('Building coresets via ' + nm)
 w = [np.array([0.])]
 p = [np.zeros((1, Z.shape[1]))]
+ls = [np.array([0.])]
 
 def build_per_m(m): # construction in parallel for different coreset sizes used in BPSVI
-  coreset.build(1, m)
-  return coreset.get()
+  alg.build(1, m)
+  return alg.get()
 
 if nm in ['BPSVI']:
   pool = Pool(processes=100)
   res = pool.map(build_per_m, range(1, M+1))
   i=1
-  for (wts, pts, _) in res:
+  for (wts, pts, idcs) in res:
     w.append(wts)
+    pts = Y[idcs, np.newaxis]*pts
     p.append(pts)
+    ls.append(Y[idcs])
     i+=1
 else:
   for m in range(1, M+1):
     if nm != 'PRIOR':
       alg.build(1, m)
-      #record   weights
+      #record weights
       if nm=='BCORES':
         wts, pts, idcs, beta = alg.get()
-        print(alg.get())
       else:
         wts, pts, idcs = alg.get()
       w.append(wts)
+      pts = Y[idcs, np.newaxis]*pts
       p.append(pts)
+      ls.append(Y[idcs])
     else:
       w.append(np.array([0.]))
+      pts = Y[idcs, np.newaxis]*pts
       p.append(np.zeros((1, Z.shape[1])))
+      ls.append(Y[idcs])
 
-#get laplace approximations for each weight setting, and KL divergence to full posterior laplace approx mup Sigp
-#used for a quick/dirty performance comparison without expensive posterior sample comparisons (e.g. energy distance)
-mus_laplace = np.zeros((M+1, D))
-Sigs_laplace = np.zeros((M+1, D, D))
-pred_accuracy = np.zeros(M+1)
+accs = np.zeros(M+1)
+pll = np.zeros(M+1)
 print('Evaluation')
-'''
+Xt = np.hstack((np.ones(Xt.shape[0])[:,np.newaxis], Xt))
+
 for m in range(M+1):
-  # Sample from coreset posterior
-  mul, LSigl, LSiglInv = get_laplace(w[m], p[m], Z.mean(axis=0)[:D], diag=True)
-  mus_laplace[m,:] = mul
-  Sigs_laplace[m,:,:] = LSigl.dot(LSigl.T)
-  thetas = mul + np.random.randn(sz, mul.shape[0]).dot(LSigl.T)
+  cx, cy = p[m], ls[m].astype(int)
+  cy[cy==-1] = 0
+  sampler_data = {'x': cx, 'y': cy, 'd': cx.shape[1], 'N': cx.shape[0], 'w': w[m]}
+  thd = sampler_data['d']+1
+  N_per = 1000
+  fit = sml.sampling(data=sampler_data, iter=N_per*2, chains=1, control={'adapt_delta':0.9, 'max_treedepth':15}, verbose=False)
+  thetas = fit.extract(permuted=False)[:, 0, :thd]
   # Evaluate on test datapoints
-  y_pred_samples = self.forward(x, num_samples=100)
-  y_pred = self._compute_predictive_posterior(y_pred_samples)[None, :, :]
+  # compute the likelihood of each datapoint under assumed label in {1, -1}
+  loglikep = log_likelihood(Xt,thetas)
+  logliken = log_likelihood(-Xt,thetas)
+  # make predictions based on max log likelihood under each sampled parameter
+  # theta
+  predictions = np.ones(loglikep.shape)
+  predictions[logliken > loglikep] = -1
+  #compute the distribution of the error rate using max LL on the test set
+  # under the posterior theta distribution
+  acc = np.mean(Yt[:, np.newaxis] == predictions)
 
-  log_pred_samples = y_pred
-  L = utils.to_gpu(torch.FloatTensor([log_pred_samples.shape[0]]))
-  preds = torch.logsumexp(log_pred_samples, dim=0) - torch.log(L)
-  if not logits:
-    preds = torch.softmax(preds, dim=-1)
-  loss = self._compute_log_likelihood(y, y_pred)  # use predictive at test time
-  avg_loss = loss / len(x)
-  performance = self._evaluate_performance(y, y_pred_samples)
-  losses.append(avg_loss.cpu().item())
-  performances.append(performance.cpu().item())
-
+  print('predictive accuracy for m=', m, ' is ', acc)
+  accs[m]=acc
+  pll[m]=np.sum(log_likelihood(Yt[:, np.newaxis]*Xt,thetas))
+print('accuracies : ', accs)
+print('pll : ', pll)
+input()
+'''
 #save results
 f = open('results/'+dnm+'_'+alg+'_results_'+ID+'.pk', 'wb')
 res = (w, p, mus_laplace, Sigs_laplace, rkls_laplace, fkls_laplace)

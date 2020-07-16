@@ -3,14 +3,13 @@
 for ID in {1..1}
 do
   # i. Transactions Dataset
-	dnm="santa100K"
-	stan_samples="True"
-	samplediag="True"
-	graddiag="False"
-	i0="0.1"
+	dnm="ds1"
+	graddiag="True"
+	i0="1."
+	f_rate="0.0"
 
-	for alg in "BCORES" #"PRIOR" "RAND" "SVI" "BPSVI"
+	for alg in  "RAND" "PRIOR" "BPSVI" "BCORES" "SVI"
   do
-	  python3 main.py $alg $dnm $ID $stan_samples $samplediag $graddiag $i0
+	  python3 main.py $alg $dnm $ID $graddiag $i0 $f_rate
   done
 done
