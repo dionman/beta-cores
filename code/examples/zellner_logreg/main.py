@@ -99,10 +99,9 @@ sz = 1000
 print('Loading dataset '+dnm)
 X, Y, Xt, Yt = load_data('../data/'+dnm+'.npz') # read train and test data
 X, Y, Z, x_mean, x_std = std_cov(X, Y) # standardize covariates
-#X, Y = perturb(X, Y, f_rate=f_rate)# corrupt datapoints
+X, Y = perturb(X, Y, f_rate=f_rate)# corrupt datapoints
 D = X.shape[1]
-M = X.shape[0]
-#create the prior -- also used for the above purpose
+#create the prior
 mu0 = np.zeros(D)
 Sig0 = np.eye(D)
 
@@ -151,6 +150,8 @@ if nm in ['BPSVI']:
   i=1
   for (wts, pts, idcs) in res:
     w.append(wts)
+    pts =
+    print(idcs)
     pts = Y[idcs, np.newaxis]*pts
     p.append(pts)
     ls.append(Y[idcs])
@@ -170,45 +171,38 @@ else:
       ls.append(Y[idcs])
     else:
       w.append(np.array([0.]))
-      pts = Y[idcs, np.newaxis]*pts
-      p.append(np.zeros((1, Z.shape[1])))
-      ls.append(Y[idcs])
+      p.append(np.zeros((1,D)))
+
+Xt = np.hstack((np.ones(Xt.shape[0])[:,np.newaxis], Xt))
+N_per = 1000
 
 accs = np.zeros(M+1)
 pll = np.zeros(M+1)
-print('Evaluation')
-Xt = np.hstack((np.ones(Xt.shape[0])[:,np.newaxis], Xt))
 
-for m in range(M+1):
-  cx, cy = p[m], ls[m].astype(int)
-  cy[cy==-1] = 0
-  sampler_data = {'x': cx, 'y': cy, 'd': cx.shape[1], 'N': cx.shape[0], 'w': w[m]}
+print('Evaluation')
+if nm=='PRIOR':
+  sampler_data = {'x': np.zeros((1,D)), 'y': [0], 'd': D, 'N': 1, 'w': [0]}
   thd = sampler_data['d']+1
-  N_per = 1000
   fit = sml.sampling(data=sampler_data, iter=N_per*2, chains=1, control={'adapt_delta':0.9, 'max_treedepth':15}, verbose=False)
   thetas = fit.extract(permuted=False)[:, 0, :thd]
-  # Evaluate on test datapoints
-  # compute the likelihood of each datapoint under assumed label in {1, -1}
-  loglikep = log_likelihood(Xt,thetas)
-  logliken = log_likelihood(-Xt,thetas)
-  # make predictions based on max log likelihood under each sampled parameter
-  # theta
-  predictions = np.ones(loglikep.shape)
-  predictions[logliken > loglikep] = -1
-  #compute the distribution of the error rate using max LL on the test set
-  # under the posterior theta distribution
-  acc = np.mean(Yt[:, np.newaxis] == predictions)
-
-  print('predictive accuracy for m=', m, ' is ', acc)
-  accs[m]=acc
-  pll[m]=np.sum(log_likelihood(Yt[:, np.newaxis]*Xt,thetas))
+  for m in range(M+1):
+    accs[m]= compute_accuracy(Xt, Yt, thetas)
+    pll[m]=np.sum(log_likelihood(Yt[:, np.newaxis]*Xt,thetas))
+else:
+  for m in range(M+1):
+    cx, cy = p[m], ls[m].astype(int)
+    cy[cy==-1] = 0
+    sampler_data = {'x': cx, 'y': cy, 'd': cx.shape[1], 'N': cx.shape[0], 'w': w[m]}
+    thd = sampler_data['d']+1
+    fit = sml.sampling(data=sampler_data, iter=N_per*2, chains=1, control={'adapt_delta':0.9, 'max_treedepth':15}, verbose=False)
+    thetas = fit.extract(permuted=False)[:, 0, :thd]
+    accs[m]= compute_accuracy(Xt, Yt, thetas)
+    pll[m]=np.sum(log_likelihood(Yt[:, np.newaxis]*Xt,thetas))
 print('accuracies : ', accs)
 print('pll : ', pll)
-input()
-'''
+
 #save results
-f = open('results/'+dnm+'_'+alg+'_results_'+ID+'.pk', 'wb')
-res = (w, p, mus_laplace, Sigs_laplace, rkls_laplace, fkls_laplace)
+f = open('results/'+dnm+'_'+nm+'_results_'+ID+'.pk', 'wb')
+res = (w, p, accs, pll)
 pk.dump(res, f)
 f.close()
-'''

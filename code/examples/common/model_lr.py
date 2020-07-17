@@ -34,6 +34,18 @@ def get_predprobs(X_ts, thetas, x_mean, x_std):
   X_ts[:,:-1] = np.linalg.solve(np.linalg.cholesky(x_std), (X_ts[:,:-1] - x_mean).T).T
   return np.mean(1./(1+np.exp(X_ts.dot(thetas.T))), axis=1)
 
+def compute_accuracy(Xt, Yt, thetas):
+  loglikep = log_likelihood(Xt,thetas)
+  logliken = log_likelihood(-Xt,thetas)
+  # make predictions based on max log likelihood under each sampled parameter
+  # theta
+  predictions = np.ones(loglikep.shape)
+  predictions[logliken > loglikep] = -1
+  #compute the distribution of the error rate using max LL on the test set
+  # under the posterior theta distribution
+  acc = np.mean(Yt[:, np.newaxis] == predictions)
+  return acc
+
 def _compute_expected_ll(X_ts, thetas, py):
   logits = x @ theta
   ys = torch.ones_like(logits).type(torch.LongTensor) * torch.arange(self.linear.out_features)[None, :]
@@ -47,7 +59,7 @@ def perturb(X_train, y_train, noise_x=(0,0,[6]), f_rate=0.1, flip=True):
   idxx = np.random.choice(N, size=o)
   idxy = np.random.choice(N, size=o)
   for i in noise_x[2]: X_train[idxx,i] = np.random.normal(noise_x[0], noise_x[1], size=o)
-  if flip: y_train[idxy] = 1 - y_train[idxy]
+  if flip: y_train[idxy] = -y_train[idxy]
   return X_train, y_train
 
 def gen_synthetic(n):
