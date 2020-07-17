@@ -4,7 +4,7 @@ from ..util.opt import partial_nn_opt
 from .coreset import Coreset
 
 class BatchPSVICoreset(Coreset):
-  def __init__(self, data, ll_projector, opt_itrs, n_subsample_opt=None, step_sched=lambda m: lambda i : 1./(1.+i), mup=None, Zmean=None, SigpInv=None, diagnostics=False, **kw): 
+  def __init__(self, data, ll_projector, opt_itrs, n_subsample_opt=None, step_sched=lambda m: lambda i : 1./(1.+i), mup=None, Zmean=None, SigpInv=None, diagnostics=False, **kw):
     self.data = data
     self.ll_projector = ll_projector
     self.opt_itrs = opt_itrs
@@ -19,7 +19,7 @@ class BatchPSVICoreset(Coreset):
     init_idcs = np.random.choice(self.data.shape[0], size=sz, replace=False)
     self.pts = self.data[init_idcs]
     self.wts = self.data.shape[0]/sz*np.ones(sz)
-    self.idcs = -1*np.ones(sz)
+    self.idcs = init_idcs
     # run gradient optimization for opt_itrs steps
     self._optimize()
 
@@ -53,9 +53,9 @@ class BatchPSVICoreset(Coreset):
       wgrad = -corevecs.dot(resid) / corevecs.shape[1]
       ugrad = -(w[:, np.newaxis, np.newaxis]*pgrads*resid[np.newaxis, :, np.newaxis]).sum(axis=1)/corevecs.shape[1]
       #return reshaped grad
-      grad =  np.hstack((wgrad, ugrad.reshape(sz*d))) 
+      grad =  np.hstack((wgrad, ugrad.reshape(sz*d)))
       return grad
-    
+
     x0 = np.hstack((self.wts, self.pts.reshape(sz*d)))
     xf = partial_nn_opt(x0, grd, np.arange(sz), self.opt_itrs, step_sched = self.step_sched(sz))
     self.wts = xf[:sz]
@@ -63,6 +63,3 @@ class BatchPSVICoreset(Coreset):
 
   def error(self):
     return 0. #TODO: implement KL estimate
-
- 
-
