@@ -200,7 +200,7 @@ print('accuracies : ', accs)
 print('pll : ', pll)
 
 #save results
-f = open('results/'+dnm+'_'+nm+'_results_'+ID+'.pk', 'wb')
+f = open('results/'+dnm+'_'+nm+'_'+str(f_rate)+'_'+str(i0)+'_'+str(graddiag)+'_results_'+ID+'.pk', 'wb')
 res = (w, p, accs, pll)
 pk.dump(res, f)
 f.close()
