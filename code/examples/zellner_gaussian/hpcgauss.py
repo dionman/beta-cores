@@ -23,7 +23,7 @@ from gaussian import *
 def linearize():
   args_dict = dict()
   c = -1
-  for beta in [0.1, 0.5, 0.9, 1.]:
+  for beta in [0.01, 0.1]: # [0.1, 0.5, 0.9, 1.]:
     for tr in range(5): # trial number
       for nm in ["BCORES"]: # coreset method
         for d in [20]:

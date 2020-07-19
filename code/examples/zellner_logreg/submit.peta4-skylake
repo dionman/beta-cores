@@ -2,14 +2,14 @@
 
 #! sbatch directives begin here ###############################
 #! Name of the job:
-#SBATCH -J gauss
+#SBATCH -J logreg
 #! Which project should be charged:
 #SBATCH -A MASCOLO-SL2-CPU
 #! Output filename:
 #! %A means slurm job ID and %a means array index
-#SBATCH --output=/home/dm754/rds/hpc-work/zellner_gaussian/outputs/%A_%a.out
+#SBATCH --output=/home/dm754/rds/hpc-work/zellner_logreg/outputs/%A_%a.out
 #! Errors filename:
-#SBATCH --error=/home/dm754/rds/hpc-work/zellner_gaussian/outputs/%A_%a.err
+#SBATCH --error=/home/dm754/rds/hpc-work/zellner_logreg/outputs/%A_%a.err
 
 #! How many whole nodes should be allocated?
 #SBATCH --nodes=1
@@ -27,7 +27,7 @@
 ##SBATCH --no-requeue
 #! Submit a job array with index values between 0 and 31
 #! NOTE: This must be a range, not a single number (i.e. specifying '32' here would only run one job, with index 32)
-#SBATCH --array=0-29
+#SBATCH --array=0-1
 
 #! For 6GB per CPU, set "-p skylake"; for 12GB per CPU, set "-p skylake-himem": 
 #SBATCH -p skylake-himem
@@ -41,5 +41,5 @@ module purge                               # Removes all modules still loaded
 module load rhel7/default-peta4            # REQUIRED - loads the basic environment
 
 source ~/coresetsvenv/bin/activate
-python3 hpcgauss.py $SLURM_ARRAY_TASK_ID
+python3 hpclogreg.py $SLURM_ARRAY_TASK_ID
 

@@ -13,7 +13,7 @@ def load_data(dnm, ttr=0.1):
   data = np.load(dnm)
   X = data['X']
   Y = data['y']
-  if 'Xt' in data.keys()
+  if 'Xt' in data.keys():
     Xt, Yt = data['Xt'], data['yt']
   else:
     test_size = int(ttr*X.shape[0])
