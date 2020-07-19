@@ -150,8 +150,6 @@ if nm in ['BPSVI']:
   i=1
   for (wts, pts, idcs) in res:
     w.append(wts)
-    pts =
-    print(idcs)
     pts = Y[idcs, np.newaxis]*pts
     p.append(pts)
     ls.append(Y[idcs])

@@ -8,7 +8,7 @@ do
 	i0="1."
 	f_rate="20.0"
 
-	for alg in  "BPSVI" "BCORES" "SVI"
+	for alg in  "PRIOR" "RAND" "BPSVI" "BCORES" "SVI"
   do
 	  python3 main.py $alg $dnm $ID $graddiag $i0 $f_rate
   done

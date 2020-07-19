@@ -13,13 +13,16 @@ def load_data(dnm, ttr=0.1):
   data = np.load(dnm)
   X = data['X']
   Y = data['y']
+  if 'Xt' in data.keys()
+    Xt, Yt = data['Xt'], data['yt']
+  else:
+    test_size = int(ttr*X.shape[0])
+    X, Y, Xt, Yt = X[:-test_size,:], Y[:-test_size], X[-test_size:,:], Y[-test_size:]
   data.close()
-  test_size = int(ttr*X.shape[0])
-  X, Y, Xt, Yt = X[:-test_size,:], Y[:-test_size], X[-test_size:,:], Y[-test_size:]
   return X[:,:-1], Y, Xt[:,:-1], Yt
 
 def std_cov(X, Y):
-  #standardize the covariates; last col is intercept, so no stdization there
+  #standardize the covariates; **last col is intercept**, so no stdization there
   x_mean = X.mean(axis=0)
   x_std = np.cov(X, rowvar=False)+1e-12*np.eye(X.shape[1])
   X = np.linalg.solve(np.linalg.cholesky(x_std), (X - x_mean).T).T
