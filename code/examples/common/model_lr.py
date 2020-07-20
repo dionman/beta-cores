@@ -7,7 +7,7 @@ import scipy.sparse as sp
 def isinteger(x):
   return np.equal(np.mod(x, 1), 0)
 
-def load_data(dnm, ttr=0.1):
+def load_data(dnm, ttr=0.2):
   # read data to numpy arrays and
   # split to train and test dataset according to ratio ttr
   data = np.load(dnm)
@@ -19,23 +19,15 @@ def load_data(dnm, ttr=0.1):
     test_size = int(ttr*X.shape[0])
     X, Y, Xt, Yt = X[:-test_size,:], Y[:-test_size], X[-test_size:,:], Y[-test_size:]
   data.close()
-  return X[:,:-1], Y, Xt[:,:-1], Yt
+  return X, Y, Xt, Yt
 
 def std_cov(X, Y):
   #standardize the covariates; **last col is intercept**, so no stdization there
-  x_mean = X.mean(axis=0)
-  x_std = np.cov(X, rowvar=False)+1e-12*np.eye(X.shape[1])
-  X = np.linalg.solve(np.linalg.cholesky(x_std), (X - x_mean).T).T
+  x_mean = X[:,:-1].mean(axis=0)
+  x_std = np.cov(X[:,:-1], rowvar=False)+1e-12*np.eye(X[:,:-1].shape[1])
+  X[:,:-1] = np.linalg.solve(np.linalg.cholesky(x_std), (X[:,:-1] - x_mean).T).T
   Z = Y[:, np.newaxis]*X
   return X, Y, Z, x_mean, x_std
-
-def get_predprobs(X_ts, thetas, x_mean, x_std):
-  # normalize test dataset
-  X_ts = np.atleast_2d(X_ts)
-  thetas = np.atleast_2d(thetas)
-  print(X_ts[:,:-1].shape, x_mean.shape)
-  X_ts[:,:-1] = np.linalg.solve(np.linalg.cholesky(x_std), (X_ts[:,:-1] - x_mean).T).T
-  return np.mean(1./(1+np.exp(X_ts.dot(thetas.T))), axis=1)
 
 def compute_accuracy(Xt, Yt, thetas):
   loglikep = log_likelihood(Xt,thetas)
@@ -44,7 +36,7 @@ def compute_accuracy(Xt, Yt, thetas):
   # theta
   predictions = np.ones(loglikep.shape)
   predictions[logliken > loglikep] = -1
-  #compute the distribution of the error rate using max LL on the test set
+  # compute the distribution of the error rate using max LL on the test set
   # under the posterior theta distribution
   acc = np.mean(Yt[:, np.newaxis] == predictions)
   return acc
@@ -56,7 +48,7 @@ def _compute_expected_ll(X_ts, thetas, py):
   loglik = torch.stack([-self.cross_entropy(logits, y) for y in ys]).t()
   return torch.sum(py * loglik, dim=-1, keepdim=True)
 
-def perturb(X_train, y_train, noise_x=(0,0,[6]), f_rate=0.1, flip=True):
+def perturb(X_train, y_train, noise_x=(0,1,[2]), f_rate=0.1, flip=True):
   N, D = X_train.shape
   o = np.int(N*f_rate)
   idxx = np.random.choice(N, size=o)
@@ -79,17 +71,17 @@ def log_likelihood(z, th):
   z = np.atleast_2d(z)
   th = np.atleast_2d(th)
   m = -z.dot(th.T)
-  #idcs = m < 100
-  #m[idcs] = -np.log1p(np.exp(m[idcs]))
-  #m[np.logical_not(idcs)] = -m[np.logical_not(idcs)]
-  m=-np.log1p(np.exp(m))
+  idcs = m < 100
+  m[idcs] = -np.log1p(np.exp(m[idcs]))
+  m[np.logical_not(idcs)] = -m[np.logical_not(idcs)]
+  #m=-np.log1p(np.exp(m))
   return m
 
 def beta_likelihood(z, th, beta):
   z = np.atleast_2d(z)
   th = np.atleast_2d(th)
   m = -z.dot(th.T)
-  idcs = m < 100
+  idcs = ((m < 100) & (-m < 100))
   m[idcs] = -(1./beta*(1+np.exp(m[idcs]))**(-beta) - 1./(beta+1.)*((1+np.exp(m[idcs]))**(-beta-1.) + (1+np.exp(-m[idcs]))**(-beta-1.)))
   m[np.logical_not(idcs)] = -m[np.logical_not(idcs)]
   return m
