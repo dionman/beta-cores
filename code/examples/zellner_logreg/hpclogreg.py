@@ -12,22 +12,20 @@ import scipy.linalg as sl
 from model_lr import *
 import pystan
 
-
 # specify random number only for test size randomization (common across trials)
 np.random.seed(42)
 rnd = np.random.rand()
 
-
 def linearize():
   args_dict = dict()
   c = -1
-  for beta in [0.01, 0.1, 0.5, 0.9]:
-    for tr in range(3): # trial number
-      for nm in ["BCORES", "BPSVI", "SVI"]: # coreset method
-        for i0 in [0.1, 1., 10.]:
-          for f_rate in [0, 15, 30]:
-            for graddiag in [False, True]:
-              for dnm in ["webspam"]: #["adult", "santa100K", "webspam"]:
+  for beta in [0.9]:
+    for tr in range(10): # trial number
+      for nm in ["BCORES", "BPSVI", "SVI", "RAND"]: # coreset method
+        for i0 in [1.0]:
+          for f_rate in [30]:
+            for graddiag in [False]:
+              for dnm in ["adult"]: #["adult", "santa100K", "webspam"]:
                 c += 1
                 args_dict[c] = (tr, nm, dnm, f_rate, beta, i0, graddiag)
   return args_dict
@@ -41,8 +39,8 @@ def linearize():
 #f_rate = float(sys.argv[6])
 
 mapping = linearize()
-#tr, nm, dnm, f_rate, beta, i0, graddiag = mapping[int(sys.argv[1])]
-tr, nm, dnm, f_rate, beta, i0, graddiag = mapping[0]
+tr, nm, dnm, f_rate, beta, i0, graddiag = mapping[int(sys.argv[1])]
+#tr, nm, dnm, f_rate, beta, i0, graddiag = mapping[0]
 
 np.random.seed(int(tr))
 
@@ -124,10 +122,10 @@ sz = 1000
 
 print('Loading dataset '+dnm)
 X, Y, Xt, Yt = load_data('../data/'+dnm+'.npz') # read train and test data
-X, Y, Z, x_mean, x_std = std_cov(X, Y) # standardize covariates
-X, Y = perturb(X, Y, f_rate=f_rate)# corrupt datapoints
-D = X.shape[1]
+X, Y, Z, x_mean, x_std = std_cov(X, Y) # standardize covariates for training data
+X, Y = perturb(X, Y, f_rate=f_rate) # corrupt datapoints
 N, D = X.shape
+print('N, D : ', N, D)
 # make sure test set is adequate for evaluation via the predictive accuracy metric
 if len(Yt[Yt==1])>0.55*len(Yt) or len(Yt[Yt==1])<0.45*len(Yt): # truncate for balanced test dataset
   totrunc=-1 # totrunc holds the majority label to be truncated (for fairness of accuracy metric)
@@ -136,9 +134,7 @@ if len(Yt[Yt==1])>0.55*len(Yt) or len(Yt[Yt==1])<0.45*len(Yt): # truncate for ba
   idcs = ([i for i, e in enumerate(Yt) if e == totrunc][:len(Yt[Yt==-totrunc])+int(0.01*len(Yt[Yt==-totrunc])*rnd)]
          +[i for i, e in enumerate(Yt) if e == -totrunc])
   Xt, Yt = Xt[idcs,:], Yt[idcs]
-#create the prior
-mu0 = np.zeros(D)
-Sig0 = np.eye(D)
+Xt, Yt, _, _, _ = std_cov(X, Y, mean_=x_mean, std_=x_std) # standardize covariates for test data
 #create the prior
 mu0 = np.zeros(D)
 Sig0 = np.eye(D)
@@ -233,7 +229,7 @@ else:
     fit = sml.sampling(data=sampler_data, iter=N_per*2, chains=1, control={'adapt_delta':0.9, 'max_treedepth':15}, verbose=False)
     thetas = fit.extract(permuted=False)[:, 0, :thd]
     accs[m]= compute_accuracy(Xt, Yt, thetas)
-    pll[m]=np.sum(log_likelihood(Yt[:, np.newaxis]*Xt,thetas))
+    pll[m]=np.mean(log_likelihood(Yt[:, np.newaxis]*Xt, thetas))
 print('accuracies : ', accs)
 print('pll : ', pll)
 

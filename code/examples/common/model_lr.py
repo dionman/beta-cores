@@ -4,9 +4,6 @@ np.set_printoptions(threshold=sys.maxsize)
 np.set_printoptions(formatter={'float': lambda x: "{0:0.1f}".format(x)})
 import scipy.sparse as sp
 
-def isinteger(x):
-  return np.equal(np.mod(x, 1), 0)
-
 def load_data(dnm, ttr=0.2):
   # read data to numpy arrays and
   # split to train and test dataset according to ratio ttr
@@ -21,10 +18,14 @@ def load_data(dnm, ttr=0.2):
   data.close()
   return X, Y, Xt, Yt
 
-def std_cov(X, Y):
+def std_cov(X, Y, mean_=None, std_=None):
   #standardize the covariates; **last col is intercept**, so no stdization there
-  x_mean = X[:,:-1].mean(axis=0)
-  x_std = np.cov(X[:,:-1], rowvar=False)+1e-12*np.eye(X[:,:-1].shape[1])
+  if (mean_ is None) & (std_ is None): # train datapoints
+    x_mean = X[:,:-1].mean(axis=0)
+    x_std = np.cov(X[:,:-1], rowvar=False)+1e-12*np.eye(X[:,:-1].shape[1])
+  else: # test datapoints
+    x_mean = mean_
+    x_std = std_
   X[:,:-1] = np.linalg.solve(np.linalg.cholesky(x_std), (X[:,:-1] - x_mean).T).T
   Z = Y[:, np.newaxis]*X
   return X, Y, Z, x_mean, x_std
@@ -41,20 +42,16 @@ def compute_accuracy(Xt, Yt, thetas):
   acc = np.mean(Yt[:, np.newaxis] == predictions)
   return acc
 
-def _compute_expected_ll(X_ts, thetas, py):
-  logits = x @ theta
-  ys = torch.ones_like(logits).type(torch.LongTensor) * torch.arange(self.linear.out_features)[None, :]
-  ys = utils.to_gpu(ys).t()
-  loglik = torch.stack([-self.cross_entropy(logits, y) for y in ys]).t()
-  return torch.sum(py * loglik, dim=-1, keepdim=True)
-
-def perturb(X_train, y_train, noise_x=(0,1,[2]), f_rate=0.1, flip=True):
+def perturb(X_train, y_train, noise_x=(0,5), f_rate=0.1, flip=True):
   N, D = X_train.shape
   o = np.int(N*f_rate)
   idxx = np.random.choice(N, size=o)
   idxy = np.random.choice(N, size=o)
-  for i in noise_x[2]: X_train[idxx,i] = np.random.normal(noise_x[0], noise_x[1], size=o)
-  if flip: y_train[idxy] = -y_train[idxy]
+  idcs =  np.random.choice(D,int(D/2.),replace=False) 
+  for i in idcs: # replace half of the features with gaussian noise 
+    X_train[idxx,i] = np.random.normal(noise_x[0], noise_x[1], size=o)
+  if flip:       # flip the labels
+    y_train[idxy] = -y_train[idxy]
   return X_train, y_train
 
 def gen_synthetic(n):
