@@ -21,13 +21,13 @@ rnd = np.random.rand()
 def linearize():
   args_dict = dict()
   c = -1
-  for beta in [0.01, 0.5]:
+  for beta in [0.01, 0.1, 0.5, 0.9]:
     for tr in range(3): # trial number
       for nm in ["BCORES", "BPSVI", "SVI"]: # coreset method
         for i0 in [0.1, 1., 10.]:
-          for f_rate in [15, 30]:
-            for graddiag in [True, False]:
-              for dnm in ["adult", "santa100K", "webspam"]:
+          for f_rate in [0, 15, 30]:
+            for graddiag in [False, True]:
+              for dnm in ["webspam"]: #["adult", "santa100K", "webspam"]:
                 c += 1
                 args_dict[c] = (tr, nm, dnm, f_rate, beta, i0, graddiag)
   return args_dict
@@ -41,8 +41,8 @@ def linearize():
 #f_rate = float(sys.argv[6])
 
 mapping = linearize()
-tr, nm, dnm, f_rate, beta, i0, graddiag = mapping[int(sys.argv[1])]
-#tr, nm, dnm, f_rate, beta, i0, graddiag = mapping[0]
+#tr, nm, dnm, f_rate, beta, i0, graddiag = mapping[int(sys.argv[1])]
+tr, nm, dnm, f_rate, beta, i0, graddiag = mapping[0]
 
 np.random.seed(int(tr))
 
@@ -121,6 +121,7 @@ BCORES_opt_itrs = 1000
 sz = 1000
 ###############################
 
+
 print('Loading dataset '+dnm)
 X, Y, Xt, Yt = load_data('../data/'+dnm+'.npz') # read train and test data
 X, Y, Z, x_mean, x_std = std_cov(X, Y) # standardize covariates
@@ -156,7 +157,6 @@ prj_bw = bc.BetaBlackBoxProjector(sampler_w, projection_dim, beta_likelihood, be
 
 print('Creating coresets object')
 #create coreset construction objects
-
 unif = bc.UniformSamplingCoreset(Z)
 sparsevi = bc.SparseVICoreset(Z, prj_w, opt_itrs = SVI_opt_itrs, n_subsample_opt = n_subsample_opt,
                               n_subsample_select = n_subsample_select, step_sched = SVI_step_sched)
@@ -193,6 +193,7 @@ if nm in ['BPSVI']:
     i+=1
 else:
   for m in range(1, M+1):
+    print('m=',m)
     if nm != 'PRIOR':
       alg.build(1, m)
       #record weights
@@ -237,7 +238,10 @@ print('accuracies : ', accs)
 print('pll : ', pll)
 
 #save results
-f = open('results/'+dnm+'_'+nm+'_frate_'+str(f_rate)+'_i0_'+str(i0)+'_beta_'+str(beta)+'_graddiag_'+str(graddiag)+'_results_'+str(tr)+'.pk', 'wb')
+f = open('/home/dm754/rds/hpc-work/zellner_logreg/results/'+dnm+'_'+nm+'_frate_'+str(f_rate)+'_i0_'+str(i0)+'_beta_'+str(beta)+'_graddiag_'+str(graddiag)+'_results_'+str(tr)+'.pk', 'wb')
 res = (w, p, accs, pll)
 pk.dump(res, f)
 f.close()
+
+
+
