@@ -9,3 +9,7 @@
 *.pickle
 *.pkl
 *.txt
+*.xcf
+*.gz
+*.aux
+*.log
