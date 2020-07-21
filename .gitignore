@@ -13,3 +13,12 @@
 *.gz
 *.aux
 *.log
+code/bayesiancoresets/__pycache__/
+code/bayesiancoresets/coreset/__pycache__/
+code/bayesiancoresets/privacy/__pycache__/
+code/bayesiancoresets/privacy/analysis/__pycache__/
+code/bayesiancoresets/snnls/__pycache__/
+code/bayesiancoresets/util/__pycache__/
+code/examples/common/__pycache__/
+code/examples/data/data/
+code/examples/zellner_gaussian/figs/
