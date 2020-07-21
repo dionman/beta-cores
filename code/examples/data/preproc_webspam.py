@@ -105,5 +105,4 @@ X, y, pp_obj = load_data('webspam_train.svm', 'svm')
 D = X.shape[1]
 # load testing data if it exists
 X_test, y_test, _ = load_data('webspam_test.svm', 'svm')
-print(X.shape, y.shape, X_test.shape, y_test.shape, y, len(y_test[y_test==1]))
 np.savez('webspam', X=X, y=y, Xt=X_test, yt=y_test)
