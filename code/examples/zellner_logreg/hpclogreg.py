@@ -23,20 +23,12 @@ def linearize():
     for tr in range(10): # trial number
       for nm in ["BCORES", "BPSVI", "SVI", "RAND"]: # coreset method
         for i0 in [1.0]:
-          for f_rate in [30]:
+          for f_rate in [10]:
             for graddiag in [False]:
               for dnm in ["adult"]: #["adult", "santa100K", "webspam"]:
                 c += 1
                 args_dict[c] = (tr, nm, dnm, f_rate, beta, i0, graddiag)
   return args_dict
-
-#nm = sys.argv[1]
-#dnm = sys.argv[2]
-#ID = sys.argv[3]
-#graddiag = (sys.argv[4]=="True") # diagonal Gaussian assumption for coreset sampler
-#riemann_coresets = ['BPSVI', 'SVI', 'BCORES']
-#if nm in riemann_coresets: i0 = float(sys.argv[5])
-#f_rate = float(sys.argv[6])
 
 mapping = linearize()
 tr, nm, dnm, f_rate, beta, i0, graddiag = mapping[int(sys.argv[1])]
@@ -123,7 +115,7 @@ sz = 1000
 print('Loading dataset '+dnm)
 X, Y, Xt, Yt = load_data('../data/'+dnm+'.npz') # read train and test data
 X, Y, Z, x_mean, x_std = std_cov(X, Y) # standardize covariates for training data
-X, Y = perturb(X, Y, f_rate=f_rate) # corrupt datapoints
+X, Y = perturb(X, Y, f_rate=0.01*f_rate) # corrupt datapoints
 N, D = X.shape
 print('N, D : ', N, D)
 # make sure test set is adequate for evaluation via the predictive accuracy metric
@@ -229,7 +221,7 @@ else:
     fit = sml.sampling(data=sampler_data, iter=N_per*2, chains=1, control={'adapt_delta':0.9, 'max_treedepth':15}, verbose=False)
     thetas = fit.extract(permuted=False)[:, 0, :thd]
     accs[m]= compute_accuracy(Xt, Yt, thetas)
-    pll[m]=np.mean(log_likelihood(Yt[:, np.newaxis]*Xt, thetas))
+    pll[m]=np.sum(log_likelihood(Yt[:, np.newaxis]*Xt, thetas))
 print('accuracies : ', accs)
 print('pll : ', pll)
 
