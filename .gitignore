@@ -1,2 +1,10 @@
-# ignore all npz
+# ignore all heavy files
 *.npz
+*.xlsx
+*.csv
+*.pk
+*.svm
+*.data
+*.mat
+*.pickle
+*.pkl
