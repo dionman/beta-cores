@@ -219,7 +219,7 @@ else:
     sampler_data = {'x': cx, 'y': cy, 'd': cx.shape[1], 'N': cx.shape[0], 'w': w[m]}
     thd = sampler_data['d']+1
     fit = sml.sampling(data=sampler_data, iter=N_per*2, chains=1, control={'adapt_delta':0.9, 'max_treedepth':15}, verbose=False)
-    thetas = fit.extract(permuted=False)[:, 0, :thd]
+    thetas = np.roll(fit.extract(permuted=False)[:, 0, :thd], -1)
     accs[m] = compute_accuracy(Xt, Yt, thetas)
     pll[m] = np.sum(log_likelihood(Yt[:, np.newaxis]*Xt, thetas))
 print('accuracies : ', accs)
