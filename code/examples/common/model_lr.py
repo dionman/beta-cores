@@ -68,19 +68,16 @@ def log_likelihood(z, th):
   z = np.atleast_2d(z)
   th = np.atleast_2d(th)
   m = -z.dot(th.T)
-  idcs = m < 100
+  idcs = m < 500
   m[idcs] = -np.log1p(np.exp(m[idcs]))
   m[np.logical_not(idcs)] = -m[np.logical_not(idcs)]
-  #m=-np.log1p(np.exp(m))
   return m
 
 def beta_likelihood(z, th, beta):
   z = np.atleast_2d(z)
   th = np.atleast_2d(th)
   m = -z.dot(th.T)
-  idcs = ((m < 100) & (-m < 100))
-  m[idcs] = -(1./beta*(1+np.exp(m[idcs]))**(-beta) - 1./(beta+1.)*((1+np.exp(m[idcs]))**(-beta-1.) + (1+np.exp(-m[idcs]))**(-beta-1.)))
-  m[np.logical_not(idcs)] = -m[np.logical_not(idcs)]
+  m = -(1./beta*(1+np.exp(m))**(-beta) - 1./(beta+1.)*((1+np.exp(m))**(-beta-1.) + (1+np.exp(-m))**(-beta-1.)))
   return m
 
 def log_prior(th):
@@ -92,10 +89,6 @@ def log_joint(z, th, wts):
 
 def logistic_likelihood(z, th, wts):
   return (wts[:, np.newaxis]*log_likelihood(z, th)).sum(axis=0)
-
-def predictive_log_likelihood(samples, Z_test, wts):
-  ll = logistic_likelihood(samples, Z_test, wts).sum()
-  return ll / (samples.shape[0] * Z_test.shape[0])
 
 def grad_th_log_likelihood(z, th):
   z = np.atleast_2d(z)
