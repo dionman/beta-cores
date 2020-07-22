@@ -19,11 +19,11 @@ rnd = np.random.rand()
 def linearize():
   args_dict = dict()
   c = -1
-  for beta in [0.9]:
+  for beta in [0.01]:
     for tr in range(10): # trial number
-      for nm in ["BCORES", "BPSVI", "SVI", "RAND"]: # coreset method
+      for nm in ["SVI", "BCORES", "BPSVI",  "RAND"]: # coreset method
         for i0 in [1.0]:
-          for f_rate in [10]:
+          for f_rate in [0]:
             for graddiag in [False]:
               for dnm in ["adult"]: #["adult", "santa100K", "webspam"]:
                 c += 1
@@ -197,7 +197,7 @@ else:
       w.append(np.array([0.]))
       p.append(np.zeros((1,D)))
 
-Xt = np.hstack((np.ones(Xt.shape[0])[:,np.newaxis], Xt))
+#Xt = np.hstack((np.ones(Xt.shape[0])[:,np.newaxis], Xt))
 N_per = 1000
 
 accs = np.zeros(M+1)
@@ -205,7 +205,7 @@ pll = np.zeros(M+1)
 
 print('Evaluation')
 if nm=='PRIOR':
-  sampler_data = {'x': np.zeros((1,D)), 'y': [0], 'd': D, 'N': 1, 'w': [0]}
+  sampler_data = {'x': np.zeros((1,D-1)), 'y': [0], 'd': D, 'N': 1, 'w': [0]}
   thd = sampler_data['d']+1
   fit = sml.sampling(data=sampler_data, iter=N_per*2, chains=1, control={'adapt_delta':0.9, 'max_treedepth':15}, verbose=False)
   thetas = fit.extract(permuted=False)[:, 0, :thd]
@@ -214,14 +214,14 @@ if nm=='PRIOR':
     pll[m]=np.sum(log_likelihood(Yt[:, np.newaxis]*Xt,thetas))
 else:
   for m in range(M+1):
-    cx, cy = p[m], ls[m].astype(int)
+    cx, cy = p[m][:, :-1], ls[m].astype(int)
     cy[cy==-1] = 0
     sampler_data = {'x': cx, 'y': cy, 'd': cx.shape[1], 'N': cx.shape[0], 'w': w[m]}
     thd = sampler_data['d']+1
     fit = sml.sampling(data=sampler_data, iter=N_per*2, chains=1, control={'adapt_delta':0.9, 'max_treedepth':15}, verbose=False)
     thetas = fit.extract(permuted=False)[:, 0, :thd]
-    accs[m]= compute_accuracy(Xt, Yt, thetas)
-    pll[m]=np.sum(log_likelihood(Yt[:, np.newaxis]*Xt, thetas))
+    accs[m] = compute_accuracy(Xt, Yt, thetas)
+    pll[m] = np.sum(log_likelihood(Yt[:, np.newaxis]*Xt, thetas))
 print('accuracies : ', accs)
 print('pll : ', pll)
 
