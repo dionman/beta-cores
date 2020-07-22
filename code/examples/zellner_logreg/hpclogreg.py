@@ -125,7 +125,8 @@ if len(Yt[Yt==1])>0.55*len(Yt) or len(Yt[Yt==1])<0.45*len(Yt): # truncate for ba
   idcs = ([i for i, e in enumerate(Yt) if e == totrunc][:len(Yt[Yt==-totrunc])+int(0.01*len(Yt[Yt==-totrunc])*rnd)]
          +[i for i, e in enumerate(Yt) if e == -totrunc])
   Xt, Yt = Xt[idcs,:], Yt[idcs]
-Xt, Yt, _, _, _ = std_cov(X, Y, mean_=x_mean, std_=x_std) # standardize covariates for test data
+Xt, Yt, _, _, _ = std_cov(Xt, Yt, mean_=x_mean, std_=x_std) # standardize covariates for test data
+
 #create the prior
 mu0 = np.zeros(D)
 Sig0 = np.eye(D)
