@@ -2,11 +2,11 @@
 
 fldr_figs='figs'
 fldr_res='results'
-for beta in  "0.01"
+for beta in  "0.1" "0.5" "0.9"
 do
 for i0 in "1.0"
 do
-for f_rate in "0"
+for f_rate in "10"
 do
 for graddiag in "False"
 do
