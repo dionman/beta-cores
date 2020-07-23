@@ -42,27 +42,30 @@ def compute_accuracy(Xt, Yt, thetas):
   acc = np.mean(Yt[:, np.newaxis] == predictions)
   return acc
 
-def perturb(X_train, y_train, noise_x=(0,1), f_rate=0.1, flip=True):
+def perturb(X_train, y_train, noise_x=(0,1), f_rate=0.1, flip=True, structured=False, mean_val=1., std_val=1., theta_val=1.):
   N, D = X_train.shape
   o = np.int(N*f_rate)
   idxx = np.random.choice(N, size=o)
-  idxy = np.random.choice(N, size=o)
-  idcs =  np.random.choice(D,int(D/2.),replace=False) 
-  for i in idcs: # replace half of the features with gaussian noise 
-    X_train[idxx,i] = np.random.normal(noise_x[0], noise_x[1], size=o)
-  if flip:       # flip the labels
-    y_train[idxy] = -y_train[idxy]
+  if not structured: # random noise/mislabeling in input/output space
+    idxy = np.random.choice(N, size=o)
+    idcs =  np.random.choice(D,int(D/2.),replace=False) 
+    for i in idcs: # replace half of the features with gaussian noise 
+      X_train[idxx,i] = np.random.normal(noise_x[0], noise_x[1], size=o)
+    if flip:       # flip the labels
+      y_train[idxy] = -y_train[idxy]
+  else: # structured perturbation for desirable decision boundary
+    X_train[idxx,:], y_train[idxx], _, _ = gen_synthetic(n, d=D, mean_val=mean_val, std_val=std_val, theta_val=theta_val) 
   return X_train, y_train
 
-def gen_synthetic(n):
-  mu = np.array([0, 0])
-  cov = np.eye(2)
-  th = np.array([3, 3])
+def gen_synthetic(n, d=2, mean_val=1., std_val=1., theta_val=1.):
+  mu = mean_val*np.ones(d)
+  cov = std_val*np.eye(d)
+  th = theta_val*np.ones(d)
   X = np.random.multivariate_normal(mu, cov, n)
   ps = 1.0/(1.0+np.exp(-(X*th).sum(axis=1)))
   y = (np.random.rand(n) <= ps).astype(int)
   y[y==0] = -1
-  return y[:, np.newaxis]*X, (y[:, np.newaxis]*X).mean(axis=0)
+  return X, y, y[:, np.newaxis]*X, (y[:, np.newaxis]*X).mean(axis=0)
 
 def log_likelihood(z, th):
   z = np.atleast_2d(z)

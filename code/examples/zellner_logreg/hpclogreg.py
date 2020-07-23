@@ -19,13 +19,13 @@ rnd = np.random.rand()
 def linearize():
   args_dict = dict()
   c = -1
-  for beta in [0.1, 0.9]:
+  for beta in [0.9]:
     for tr in range(10): # trial number
-      for nm in ['BCORES']: #["SVI", "BCORES", "BPSVI",  "RAND"]: # coreset method
+      for nm in ["SVI", "BCORES", "BPSVI", "RAND"]: # coreset method
         for i0 in [1.0]:
-          for f_rate in [10]:
+          for f_rate in [30]:
             for graddiag in [False]:
-              for dnm in ["adult"]: #["adult", "santa100K", "webspam"]:
+              for dnm in ["adult", "webspam"]:
                 c += 1
                 args_dict[c] = (tr, nm, dnm, f_rate, beta, i0, graddiag)
   return args_dict
@@ -104,17 +104,18 @@ BCORES_step_sched = lambda itr : i0/(1.+itr)
 
 n_subsample_opt = 200
 n_subsample_select = 1000
-projection_dim = 200 #random projection dimension
-SVI_opt_itrs = 1000
-BPSVI_opt_itrs = 1000
-BCORES_opt_itrs = 1000
+projection_dim = 100 #random projection dimension
+SVI_opt_itrs = 500
+BPSVI_opt_itrs = 500
+BCORES_opt_itrs = 500
 sz = 1000
+structured = True
 ###############################
 
 print('Loading dataset '+dnm)
 X, Y, Xt, Yt = load_data('../data/'+dnm+'.npz') # read train and test data
 X, Y, Z, x_mean, x_std = std_cov(X, Y) # standardize covariates for training data
-X, Y = perturb(X, Y, f_rate=0.01*f_rate) # corrupt datapoints
+X, Y = perturb(X, Y, f_rate=0.01*f_rate, structured=structured) # corrupt datapoints
 N, D = X.shape
 print('N, D : ', N, D)
 # make sure test set is adequate for evaluation via the predictive accuracy metric
@@ -181,10 +182,9 @@ if nm in ['BPSVI']:
     i+=1
 else:
   for m in range(1, M+1):
-    print('m=',m)
+    print('m=', m)
     if nm != 'PRIOR':
       alg.build(1, m)
-      #record weights
       if nm=='BCORES':
         wts, pts, idcs, beta = alg.get()
       else:
@@ -220,12 +220,12 @@ else:
     fit = sml.sampling(data=sampler_data, iter=N_per*2, chains=1, control={'adapt_delta':0.9, 'max_treedepth':15}, verbose=False)
     thetas = np.roll(fit.extract(permuted=False)[:, 0, :thd], -1)
     accs[m] = compute_accuracy(Xt, Yt, thetas)
-    pll[m] = np.sum(log_likelihood(Yt[:, np.newaxis]*Xt, thetas))
+    pll[m] = np.sum(log_likelihood(Yt[:, np.newaxis]*Xt, thetas))/float(Xt.shape[0]*thetas.shape[0])
 print('accuracies : ', accs)
 print('pll : ', pll)
 
 #save results
-f = open('/home/dm754/rds/hpc-work/zellner_logreg/results/'+dnm+'_'+nm+'_frate_'+str(f_rate)+'_i0_'+str(i0)+'_beta_'+str(beta)+'_graddiag_'+str(graddiag)+'_results_'+str(tr)+'.pk', 'wb')
+f = open('/home/dm754/rds/hpc-work/zellner_logreg/results/'+dnm+'_'+nm+'_frate_'+str(f_rate)+'_i0_'+str(i0)+'_beta_'+str(beta)+'_graddiag_'+str(graddiag)+_+str(structured)+'_results_'+str(tr)+'.pk', 'wb')
 res = (w, p, accs, pll)
 pk.dump(res, f)
 f.close()
