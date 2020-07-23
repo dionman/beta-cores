@@ -175,6 +175,7 @@ if nm in ['BPSVI']:
   res = pool.map(build_per_m, range(1, M+1))
   i=1
   for (wts, pts, idcs) in res:
+    print('m=', m)
     w.append(wts)
     pts = Y[idcs, np.newaxis]*pts
     p.append(pts)
@@ -225,7 +226,7 @@ print('accuracies : ', accs)
 print('pll : ', pll)
 
 #save results
-f = open('/home/dm754/rds/hpc-work/zellner_logreg/results/'+dnm+'_'+nm+'_frate_'+str(f_rate)+'_i0_'+str(i0)+'_beta_'+str(beta)+'_graddiag_'+str(graddiag)+_+str(structured)+'_results_'+str(tr)+'.pk', 'wb')
+f = open('/home/dm754/rds/hpc-work/zellner_logreg/results/'+dnm+'_'+nm+'_frate_'+str(f_rate)+'_i0_'+str(i0)+'_beta_'+str(beta)+'_graddiag_'+str(graddiag)+'_'+str(structured)+'_results_'+str(tr)+'.pk', 'wb')
 res = (w, p, accs, pll)
 pk.dump(res, f)
 f.close()

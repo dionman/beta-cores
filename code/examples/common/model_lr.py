@@ -42,7 +42,7 @@ def compute_accuracy(Xt, Yt, thetas):
   acc = np.mean(Yt[:, np.newaxis] == predictions)
   return acc
 
-def perturb(X_train, y_train, noise_x=(0,1), f_rate=0.1, flip=True, structured=False, mean_val=1., std_val=1., theta_val=1.):
+def perturb(X_train, y_train, noise_x=(0,1), f_rate=0.1, flip=True, structured=False, mean_val=1., std_val=.5, theta_val=5.):
   N, D = X_train.shape
   o = np.int(N*f_rate)
   idxx = np.random.choice(N, size=o)
@@ -54,7 +54,7 @@ def perturb(X_train, y_train, noise_x=(0,1), f_rate=0.1, flip=True, structured=F
     if flip:       # flip the labels
       y_train[idxy] = -y_train[idxy]
   else: # structured perturbation for desirable decision boundary
-    X_train[idxx,:], y_train[idxx], _, _ = gen_synthetic(n, d=D, mean_val=mean_val, std_val=std_val, theta_val=theta_val) 
+    X_train[idxx,:], y_train[idxx], _, _ = gen_synthetic(o, d=D, mean_val=mean_val, std_val=std_val, theta_val=theta_val) 
   return X_train, y_train
 
 def gen_synthetic(n, d=2, mean_val=1., std_val=1., theta_val=1.):
