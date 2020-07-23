@@ -63,7 +63,7 @@ for alg in algs:
     pts = res[1]
     accs[tridx] = res[2]
     print(res[3])
-    plls[tridx]  = -np.log(-res[3])
+    plls[tridx]  = -res[3]
     cszs[tridx, :] = np.array([len(w) for w in wts])
 
   csz50 = np.percentile(cszs, 50, axis=0)
@@ -113,6 +113,7 @@ for f in [fig2, fig4]:
   f.legend.spacing=10
   f.legend.visible = True
 
+fig2.add_layout(Title(text="F="+str(f_rate)+"%", text_font_style="italic", text_font_size = "70px"), 'above')
 fig2.add_layout(Title(text=dnmnm, align="center", text_font='helvetica', text_font_style='bold', text_font_size = "80px"), "above")
 
 
