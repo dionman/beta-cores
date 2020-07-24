@@ -44,7 +44,6 @@ def compute_accuracy(Xt, Yt, thetas):
 def perturb(X_train, y_train, noise_x=(0,5), f_rate=0.1, flip=True, structured=False, mean_val=0.5, std_val=.05, theta_val=10.):
   N, D = X_train.shape
   o = np.int(N*f_rate)
-  #cleancopy, ytraincopy = X_train.copy(), y_train.copy()
   idxx = np.random.choice(N, size=o)
   if not structured: # random noise/mislabeling in input/output space
     idxy = np.random.choice(N, size=o)
@@ -55,9 +54,6 @@ def perturb(X_train, y_train, noise_x=(0,5), f_rate=0.1, flip=True, structured=F
       y_train[idxy] = -y_train[idxy]
   else: # structured perturbation for desirable decision boundary
     X_train[idxx,:], y_train[idxx], _, _ = gen_synthetic(o, d=D, mean_val=mean_val, std_val=std_val, theta_val=theta_val) 
-  #axis=1
-  #print(N, D, o, np.sum([c==X_train.shape[axis] for c in np.sum(X_train == cleancopy, axis=axis)]), np.sum(ytraincopy==y_train))
-  #exit()
   return X_train, y_train, X_train[:, np.newaxis]*y_train
 
 def gen_synthetic(n, d=2, mean_val=1., std_val=1., theta_val=1.):
