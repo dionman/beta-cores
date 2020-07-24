@@ -54,7 +54,7 @@ def perturb(X_train, y_train, noise_x=(0,5), f_rate=0.1, flip=True, structured=F
       y_train[idxy] = -y_train[idxy]
   else: # structured perturbation for desirable decision boundary
     X_train[idxx,:], y_train[idxx], _, _ = gen_synthetic(o, d=D, mean_val=mean_val, std_val=std_val, theta_val=theta_val) 
-  return X_train, y_train, X_train[:, np.newaxis]*y_train
+  return X_train, y_train, y_train[:, np.newaxis]*X_train
 
 def gen_synthetic(n, d=2, mean_val=1., std_val=1., theta_val=1.):
   mu = mean_val*np.ones(d)
