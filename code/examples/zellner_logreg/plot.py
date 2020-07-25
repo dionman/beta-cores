@@ -15,13 +15,14 @@ if dnm=='adult':
 elif dnm=='santa100K':
   dnmnm='TRANSACTIONS'
 else:
-  dnmnm='WEBSPAM'
+  dnmnm='PHISHING'
 fldr_figs=sys.argv[2]
 fldr_res=sys.argv[3]
 beta=float(sys.argv[4])
 i0=float(sys.argv[5])
 f_rate=int(sys.argv[6])
 graddiag=str(sys.argv[7])
+structured=str(sys.argv[8])
 
 algs = [('BCORES', 'β-Cores', pal[0]), ('SVI', 'SparseVI', pal[4]), ('BPSVI', 'PSVI', pal[7]), ('RAND', 'Uniform', pal[3])] #
 fldr_figs = 'figs'
@@ -43,8 +44,10 @@ figs.append([fig, fig2, fig3, fig4])
 M=101
 
 for alg in algs:
-
-  trials = [fn for fn in os.listdir(fldr_res) if fn.startswith(dnm+'_'+alg[0]+'_frate_'+str(f_rate)+'_i0_'+str(i0)+'_beta_'+str(beta)+'_graddiag_'+str(graddiag))]
+  #if alg[0]=='BCORES':
+  #    trials = [fn for fn in os.listdir(fldr_res) if fn.startswith(dnm+'_'+alg[0]+'_frate_'+str(f_rate)+'_i0_'+str(i0)+'_beta_0.9_graddiag_'+str(graddiag)+'_'+str(structured))]
+  #else:
+  trials = [fn for fn in os.listdir(fldr_res) if fn.startswith(dnm+'_'+alg[0]+'_frate_'+str(f_rate)+'_i0_'+str(i0)+'_beta_'+str(beta)+'_graddiag_'+str(graddiag)+'_'+str(structured))]
   print(trials)
   if len(trials) == 0:
     fig.line([], [], color=alg[2], legend_label=alg[1], line_width=10); fig.patch([], [], color=alg[2], legend_label=alg[1], alpha=0.3)
@@ -114,15 +117,15 @@ for f in [fig2, fig4]:
   f.legend.visible = True
 
 fig2.add_layout(Title(text="F="+str(f_rate)+"%", text_font_style="italic", text_font_size = "70px"), 'above')
+fig2.add_layout(Title(text="β="+str(beta), text_font_style="italic", text_font_size = "60px"), 'right')
 fig2.add_layout(Title(text=dnmnm, align="center", text_font='helvetica', text_font_style='bold', text_font_size = "80px"), "above")
 
 
-fnm = (str(beta)+'_'+str(i0)+'_'+str(f_rate)+'_'+str(graddiag)).replace('.', '')
-
+fnm = (str(beta)+'_'+str(i0)+'_'+str(f_rate)+'_'+str(graddiag)+'_'+str(structured)).replace('.', '')
 #export_png(fig, filename=os.path.join(fldr_figs, dnm+fnm+"_ACCvsit.png"), height=1500, width=2000)
 export_png(fig2, filename=os.path.join(fldr_figs, dnm+fnm+"_ACCvssz.png"), height=1500, width=2000)
 #export_png(fig3, filename=os.path.join(fldr_figs, dnm+fnm+"_LLvsit.png"), height=1500, width=2000)
-export_png(fig4, filename=os.path.join(fldr_figs, dnm+fnm+"_LLvssz.png"), height=1500, width=2000)
+#export_png(fig4, filename=os.path.join(fldr_figs, dnm+fnm+"_LLvssz.png"), height=1500, width=2000)
 
 np.savez('results/diagnostics_'+dnm+'_'+fnm, accs=accs, plls=plls)
 #bkp.show(bkl.gridplot(figs))
