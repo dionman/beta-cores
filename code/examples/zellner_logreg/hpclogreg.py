@@ -21,7 +21,7 @@ def linearize():
   c = -1
   for beta in [0.9]:
     for tr in range(10): # trial number
-      for nm in ["SVI", "BCORES", "BPSVI", "RAND"]: # coreset method
+      for nm in ["SVI", "BCORES", "BPSVI"]: #, "RAND"]: # coreset method
         for i0 in [1.0]:
           for f_rate in [15]: #30
             for graddiag in [True]:
@@ -168,6 +168,7 @@ ls = [np.array([0.])]
 
 def build_per_m(m): # construction in parallel for different coreset sizes used in BPSVI
   alg.build(1, m)
+  print('m=', m)
   return alg.get()
 
 if nm in ['BPSVI']:
@@ -213,6 +214,7 @@ if nm=='PRIOR':
     pll[m]=np.sum(log_likelihood(Yt[:, np.newaxis]*Xt,thetas))
 else:
   for m in range(M+1):
+    print('evaluating for m=',m)
     cx, cy = p[m][:, :-1], ls[m].astype(int)
     cy[cy==-1] = 0
     sampler_data = {'x': cx, 'y': cy, 'd': cx.shape[1], 'N': cx.shape[0], 'w': w[m]}

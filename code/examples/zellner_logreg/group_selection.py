@@ -16,7 +16,7 @@ import pystan
 np.random.seed(42)
 rnd = np.random.rand()
 
-beta=0.01
+beta=0.7
 
 nm = "BCORES"
 dnm = "adult"
@@ -24,7 +24,7 @@ ID = 0
 graddiag = False # diagonal Gaussian assumption for coreset sampler
 riemann_coresets = ['SVI', 'BCORES']
 if nm in riemann_coresets: i0 = 1.0
-f_rate = 15
+f_rate = 25
 np.random.seed(int(ID))
 
 weighted_logistic_code = """
@@ -105,7 +105,7 @@ sz = 1000
 print('Loading dataset '+dnm)
 X, Y, Xt, Yt = load_data('../data/'+dnm+'.npz') # read train and test data
 X, Y, Z, x_mean, x_std = std_cov(X, Y) # standardize covariates
-X, Y = perturb(X, Y, f_rate=f_rate)# corrupt datapoints
+if f_rate>0: X, Y, Z = perturb(X, Y, f_rate=f_rate)# corrupt datapoints
 N, D = X.shape
 
 f = open('../data/groups_sensemake_adult.pk', 'rb')
@@ -190,7 +190,6 @@ else:
       w.append(np.array([0.]))
       p.append(np.zeros((1,D)))
 
-Xt = np.hstack((np.ones(Xt.shape[0])[:,np.newaxis], Xt))
 N_per = 1000
 
 accs = np.zeros(M+1)
@@ -198,28 +197,32 @@ pll = np.zeros(M+1)
 
 print('Evaluation')
 if nm=='PRIOR':
-  sampler_data = {'x': np.zeros((1,D)), 'y': [0], 'd': D, 'N': 1, 'w': [0]}
+  sampler_data = {'x': np.zeros((1,D-1)), 'y': [0], 'd': D, 'N': 1, 'w': [0]}
   thd = sampler_data['d']+1
   fit = sml.sampling(data=sampler_data, iter=N_per*2, chains=1, control={'adapt_delta':0.9, 'max_treedepth':15}, verbose=False)
-  thetas = fit.extract(permuted=False)[:, 0, :thd]
+  thetas = np.roll(fit.extract(permuted=False)[:, 0, :thd], -1)
   for m in range(M+1):
     accs[m]= compute_accuracy(Xt, Yt, thetas)
-    pll[m]=np.sum(log_likelihood(Yt[:, np.newaxis]*Xt,thetas))
+    pll[m]=np.sum(log_likelihood(Yt[:, np.newaxis]*Xt,thetas))/float(Xt.shape[0]*thetas.shape[0])
 else:
+  ssize=200
   for m in range(M+1):
-    cx, cy = p[m], ls[m].astype(int)
+    # subsample for MCMC
+    ridx = np.random.choice(range(p[m][:, :-1].shape[0]), size=min(ssize, p[m][:, :-1].shape[0]))
+    cx, cy = p[m][:, :-1][ridx,:], ls[m].astype(int)[ridx]
     cy[cy==-1] = 0
-    sampler_data = {'x': cx, 'y': cy, 'd': cx.shape[1], 'N': cx.shape[0], 'w': w[m]}
+    print(cx.shape, w[m][ridx].shape)
+    sampler_data = {'x': cx, 'y': cy, 'd': cx.shape[1], 'N': cx.shape[0], 'w': w[m][ridx]}
     thd = sampler_data['d']+1
     fit = sml.sampling(data=sampler_data, iter=N_per*2, chains=1, control={'adapt_delta':0.9, 'max_treedepth':15}, verbose=False)
-    thetas = fit.extract(permuted=False)[:, 0, :thd]
+    thetas = np.roll(fit.extract(permuted=False)[:, 0, :thd], -1)
     accs[m]= compute_accuracy(Xt, Yt, thetas)
-    pll[m]=np.sum(log_likelihood(Yt[:, np.newaxis]*Xt,thetas))
+    pll[m] = np.sum(log_likelihood(Yt[:, np.newaxis]*Xt, thetas))/float(Xt.shape[0]*thetas.shape[0])
 print('accuracies : ', accs)
 print('pll : ', pll)
 
 #save results
-f = open('group_results/'+dnm+'_'+nm+'_'+str(f_rate)+'_'+str(i0)+'_'+str(graddiag)+'_results_'+ID+'.pk', 'wb')
+f = open('/home/dm754/rds/hpc-work/zellner_logreg/group_results/'+dnm+'_'+nm+'_'+str(f_rate)+'_'+str(i0)+'_'+str(graddiag)+'_results_'+ID+'.pk', 'wb')
 res = (w, p, accs, pll)
 pk.dump(res, f)
 f.close()

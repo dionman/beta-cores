@@ -106,7 +106,7 @@ class BetaCoreset(Coreset):
       if corecorrs.size == 0 or corrs.max() > corecorrs.max():
         f = sub_idcs[self.group[np.argmax(corrs)]] if sub_idcs is not None else np.argmax(corrs)
         print(f)
-        if f not in self.selected_group: self.selected_groups.append(f)
+        if f not in self.selected_groups: self.selected_groups.append(f)
         #expand and initialize storage for new coreset pt
         #need to double-check that f isn't in self.idcs, since the subsample may contain some of the coreset pts
         if f not in self.idcs:
