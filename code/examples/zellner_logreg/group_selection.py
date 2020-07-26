@@ -17,7 +17,6 @@ np.random.seed(42)
 rnd = np.random.rand()
 
 beta=0.7
-
 nm = "BCORES"
 dnm = "adult"
 ID = 0
@@ -88,7 +87,7 @@ def get_laplace(wts, Z, mu0, diag=False):
 
 ###############################
 ## TUNING PARAMETERS ##
-M = 4
+M = 10
 SVI_step_sched = lambda itr : i0/(1.+itr)
 BPSVI_step_sched = lambda m: lambda itr : i0/(1.+itr) # make step schedule potentially dependent on coreset size
 BCORES_step_sched = lambda itr : i0/(1.+itr)
@@ -211,7 +210,7 @@ else:
     ridx = np.random.choice(range(p[m][:, :-1].shape[0]), size=min(ssize, p[m][:, :-1].shape[0]))
     cx, cy = p[m][:, :-1][ridx,:], ls[m].astype(int)[ridx]
     cy[cy==-1] = 0
-    sampler_data = {'x': cx, 'y': cy, 'd': cx.shape[1], 'N': cx.shape[0], 'w': w[m][ridx]}
+    sampler_data = {'x': cx, 'y': cy, 'd': cx.shape[1], 'N': cx.shape[0], 'w': np.ones(w[m][ridx].shape[0])}
     thd = sampler_data['d']+1
     fit = sml.sampling(data=sampler_data, iter=N_per*2, chains=1, control={'adapt_delta':0.9, 'max_treedepth':15}, verbose=False)
     thetas = np.roll(fit.extract(permuted=False)[:, 0, :thd], -1)
