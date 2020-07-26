@@ -19,20 +19,21 @@ rnd = np.random.rand()
 def linearize():
   args_dict = dict()
   c = -1
-  for beta in [0.9]:
+  for beta in [0.7]:
     for tr in range(10): # trial number
       for nm in ["SVI", "BCORES", "BPSVI", "RAND"]: # coreset method
         for i0 in [1.0]:
-          for f_rate in [30]:
+          for f_rate in [0]: #30
             for graddiag in [False]:
-              for dnm in ["adult", "webspam"]:
-                c += 1
-                args_dict[c] = (tr, nm, dnm, f_rate, beta, i0, graddiag)
+              for structured in [False]:
+               for dnm in ["adult", "phish"]: #, "webspam"]:
+                  c += 1
+                  args_dict[c] = (tr, nm, dnm, f_rate, beta, i0, graddiag, structured)
   return args_dict
 
 mapping = linearize()
-tr, nm, dnm, f_rate, beta, i0, graddiag = mapping[int(sys.argv[1])]
-#tr, nm, dnm, f_rate, beta, i0, graddiag = mapping[0]
+tr, nm, dnm, f_rate, beta, i0, graddiag, structured = mapping[int(sys.argv[1])]
+#tr, nm, dnm, f_rate, beta, i0, graddiag, structured = mapping[0]
 
 np.random.seed(int(tr))
 
@@ -109,13 +110,12 @@ SVI_opt_itrs = 500
 BPSVI_opt_itrs = 500
 BCORES_opt_itrs = 500
 sz = 1000
-structured = True
 ###############################
 
 print('Loading dataset '+dnm)
 X, Y, Xt, Yt = load_data('../data/'+dnm+'.npz') # read train and test data
 X, Y, Z, x_mean, x_std = std_cov(X, Y) # standardize covariates for training data
-X, Y = perturb(X, Y, f_rate=0.01*f_rate, structured=structured) # corrupt datapoints
+if f_rate>0: X, Y, Z = perturb(X, Y, f_rate=0.01*f_rate, structured=structured) # corrupt datapoints
 N, D = X.shape
 print('N, D : ', N, D)
 # make sure test set is adequate for evaluation via the predictive accuracy metric
@@ -175,7 +175,6 @@ if nm in ['BPSVI']:
   res = pool.map(build_per_m, range(1, M+1))
   i=1
   for (wts, pts, idcs) in res:
-    print('m=', m)
     w.append(wts)
     pts = Y[idcs, np.newaxis]*pts
     p.append(pts)

@@ -41,7 +41,7 @@ def compute_accuracy(Xt, Yt, thetas):
   acc = np.mean(Yt[:, np.newaxis] == predictions)
   return acc
 
-def perturb(X_train, y_train, noise_x=(0,5), f_rate=0.1, flip=True, structured=False, mean_val=0.5, std_val=.05, theta_val=10.):
+def perturb(X_train, y_train, noise_x=(0,5), f_rate=0.1, flip=True, structured=False, mean_val=0.1, std_val=1., theta_val=-1.):
   N, D = X_train.shape
   o = np.int(N*f_rate)
   idxx = np.random.choice(N, size=o)
