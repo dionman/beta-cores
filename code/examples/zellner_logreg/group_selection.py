@@ -88,7 +88,7 @@ def get_laplace(wts, Z, mu0, diag=False):
 
 ###############################
 ## TUNING PARAMETERS ##
-M = 10
+M = 4
 SVI_step_sched = lambda itr : i0/(1.+itr)
 BPSVI_step_sched = lambda m: lambda itr : i0/(1.+itr) # make step schedule potentially dependent on coreset size
 BCORES_step_sched = lambda itr : i0/(1.+itr)
@@ -206,12 +206,11 @@ if nm=='PRIOR':
     pll[m]=np.sum(log_likelihood(Yt[:, np.newaxis]*Xt,thetas))/float(Xt.shape[0]*thetas.shape[0])
 else:
   ssize=200
-  for m in range(M+1):
+  for m in range(1,M+1):
     # subsample for MCMC
     ridx = np.random.choice(range(p[m][:, :-1].shape[0]), size=min(ssize, p[m][:, :-1].shape[0]))
     cx, cy = p[m][:, :-1][ridx,:], ls[m].astype(int)[ridx]
     cy[cy==-1] = 0
-    print(cx.shape, w[m][ridx].shape)
     sampler_data = {'x': cx, 'y': cy, 'd': cx.shape[1], 'N': cx.shape[0], 'w': w[m][ridx]}
     thd = sampler_data['d']+1
     fit = sml.sampling(data=sampler_data, iter=N_per*2, chains=1, control={'adapt_delta':0.9, 'max_treedepth':15}, verbose=False)
@@ -222,7 +221,7 @@ print('accuracies : ', accs)
 print('pll : ', pll)
 
 #save results
-f = open('/home/dm754/rds/hpc-work/zellner_logreg/group_results/'+dnm+'_'+nm+'_'+str(f_rate)+'_'+str(i0)+'_'+str(graddiag)+'_results_'+ID+'.pk', 'wb')
+f = open('/home/dm754/rds/hpc-work/zellner_logreg/group_results/'+dnm+'_'+nm+'_'+str(f_rate)+'_'+str(i0)+'_'+str(graddiag)+'_results_'+str(ID)+'.pk', 'wb')
 res = (w, p, accs, pll)
 pk.dump(res, f)
 f.close()
