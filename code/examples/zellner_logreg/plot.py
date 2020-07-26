@@ -12,10 +12,10 @@ from bokeh.models import Title
 dnm=sys.argv[1]
 if dnm=='adult':
   dnmnm='ADULT'
-elif dnm=='santa100K':
-  dnmnm='TRANSACTIONS'
-else:
+elif dnm=='phish':
   dnmnm='PHISHING'
+else:
+  dnmnm='WEBSPAM'
 fldr_figs=sys.argv[2]
 fldr_res=sys.argv[3]
 beta=float(sys.argv[4])

@@ -48,7 +48,7 @@ else:
   fig4 = bkp.figure(y_axis_label='',  x_axis_label='Coreset Size',   plot_height=1500, plot_width=2000, toolbar_location=None)
   preprocess_plot(fig4, '72pt', False, False)
   figs.append([fig, fig2, fig3, fig4])
-M=5
+M=11
 
 for alg in algs:
   #if alg[0]=='BCORES':
