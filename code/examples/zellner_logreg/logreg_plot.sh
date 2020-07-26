@@ -2,17 +2,17 @@
 
 fldr_figs='figs'
 fldr_res='results'
-for beta in "0.7"
+for beta in "0.9" #"0.7"
 do
 for i0 in "1.0"
 do
-for f_rate in "25"
+for f_rate in "15" #"0" "30"
 do
 for graddiag in  "False"
 do
   for structured in  "False"
   do
-for dnm in 'adult' 'phishing'
+for dnm in 'phish'
   do
     #echo $dnm $fldr_figs $fldr_res $beta $i0 $f_rate $graddiag
     python3 plot.py $dnm $fldr_figs $fldr_res $beta $i0 $f_rate $graddiag $structured
