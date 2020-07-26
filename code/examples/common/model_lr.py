@@ -6,10 +6,10 @@ import scipy.sparse as sp
 def load_data(dnm, ttr=0.2):
   # read data to numpy arrays and
   # split to train and test dataset according to ratio ttr
-  data = np.load(dnm)
+  data = np.load(dnm, allow_pickle=True)
   X = data['X']
   Y = data['y']
-  if 'Xt' in data.keys():
+  if (data['Xt']!= None) and (data['yt']!=None):
     Xt, Yt = data['Xt'], data['yt']
   else:
     test_size = int(ttr*X.shape[0])
