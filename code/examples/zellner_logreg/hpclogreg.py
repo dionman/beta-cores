@@ -19,14 +19,14 @@ rnd = np.random.rand()
 def linearize():
   args_dict = dict()
   c = -1
-  for beta in [0.7]:
+  for beta in [0.9]:
     for tr in range(10): # trial number
       for nm in ["SVI", "BCORES", "BPSVI", "RAND"]: # coreset method
         for i0 in [1.0]:
-          for f_rate in [0]: #30
-            for graddiag in [False]:
+          for f_rate in [15]: #30
+            for graddiag in [True]:
               for structured in [False]:
-               for dnm in ["adult", "phish"]: #, "webspam"]:
+               for dnm in ["webspam"]: #, "webspam"]:
                   c += 1
                   args_dict[c] = (tr, nm, dnm, f_rate, beta, i0, graddiag, structured)
   return args_dict
