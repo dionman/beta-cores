@@ -16,7 +16,7 @@ fldr_figs='figs'
 fldr_res='group_results'
 beta=0.9
 i0=1.0
-f_rate=25
+f_rate=0
 graddiag=str(False)
 
 plot_0=False # plot baseline for zero corruption
@@ -48,13 +48,13 @@ else:
   fig4 = bkp.figure(y_axis_label='',  x_axis_label='Coreset Size',   plot_height=1500, plot_width=2000, toolbar_location=None)
   preprocess_plot(fig4, '72pt', False, False)
   figs.append([fig, fig2, fig3, fig4])
-M=11
+M=21
 
 for alg in algs:
   #if alg[0]=='BCORES':
   #    trials = [fn for fn in os.listdir(fldr_res) if fn.startswith(dnm+'_'+alg[0]+'_frate_'+str(f_rate)+'_i0_'+str(i0)+'_beta_0.9_graddiag_'+str(graddiag)+'_'+str(structured))]
   #else:
-  trials = [fn for fn in os.listdir(fldr_res) if fn.startswith(dnm+'_'+alg[0])]
+  trials = [fn for fn in os.listdir(fldr_res) if fn.startswith('adult_BCORES_0_1.0_False')]
   print(trials)
   if len(trials) == 0:
     fig.line([], [], color=alg[2], legend_label=alg[1], line_width=10); fig.patch([], [], color=alg[2], legend_label=alg[1], alpha=0.3)
@@ -71,6 +71,7 @@ for alg in algs:
     f.close()
     wts = res[0]
     pts = res[1]
+    print(res[2].shape, accs.shape)
     accs[tridx] = res[2]
     print(res[3])
     plls[tridx]  = -res[3]
