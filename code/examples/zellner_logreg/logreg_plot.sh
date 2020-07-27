@@ -8,11 +8,11 @@ for i0 in "1.0"
 do
 for f_rate in "15" #"0" "30"
 do
-for graddiag in  "False"
+for graddiag in  "True"
 do
   for structured in  "False"
   do
-for dnm in 'phish'
+for dnm in 'webspam'
   do
     #echo $dnm $fldr_figs $fldr_res $beta $i0 $f_rate $graddiag
     python3 plot.py $dnm $fldr_figs $fldr_res $beta $i0 $f_rate $graddiag $structured
