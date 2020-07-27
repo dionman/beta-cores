@@ -17,14 +17,14 @@ def load_dataset(path, urls):
       file.write(data)
   return
 
-def demographic_groups(df):
-  ages = [(0,25), (25,35), (35,45), (45,55), (55,max(df['age']))]
+def demographic_groups(df, cap=50):
+  ages = [(0,25), (25,30), (30,35), (35,40), (40,45), (45,55), (55,max(df['age']))]
   race = set(df['race'])
   gender = set(df['sex'])
   groups=[]
   for (a,r,g) in itertools.product(ages, race, gender):
     ng = df.index[(df['race']==r)&(df['sex']==g)&(a[0]<df['age'])&(df['age']<=a[1])].tolist()
-    groups+=[[df.index.get_loc(n) for n in ng]]
+    groups+=[[df.index.get_loc(n) for n in ng[:cap]]]
   #save results
   f = open('groups_sensemake_adult.pk', 'wb')
   pk.dump( (groups,list(itertools.product(ages, race, gender))), f)
