@@ -23,7 +23,7 @@ ID = 0
 graddiag = False # diagonal Gaussian assumption for coreset sampler
 riemann_coresets = ['SVI', 'BCORES']
 if nm in riemann_coresets: i0 = 1.0
-f_rate = 25
+f_rate = 0
 np.random.seed(int(ID))
 
 weighted_logistic_code = """
@@ -87,7 +87,7 @@ def get_laplace(wts, Z, mu0, diag=False):
 
 ###############################
 ## TUNING PARAMETERS ##
-M = 10
+M = 20
 SVI_step_sched = lambda itr : i0/(1.+itr)
 BPSVI_step_sched = lambda m: lambda itr : i0/(1.+itr) # make step schedule potentially dependent on coreset size
 BCORES_step_sched = lambda itr : i0/(1.+itr)
@@ -95,8 +95,8 @@ BCORES_step_sched = lambda itr : i0/(1.+itr)
 n_subsample_opt = 200
 n_subsample_select = 1000
 projection_dim = 100 #random projection dimension
-SVI_opt_itrs = 500
-BPSVI_opt_itrs = 500
+#SVI_opt_itrs = 500
+#BPSVI_opt_itrs = 500
 BCORES_opt_itrs = 500
 sz = 1000
 ###############################
@@ -120,6 +120,7 @@ if len(Yt[Yt==1])>0.55*len(Yt) or len(Yt[Yt==1])<0.45*len(Yt): # truncate for ba
   idcs = ([i for i, e in enumerate(Yt) if e == totrunc][:len(Yt[Yt==-totrunc])+int(0.01*len(Yt[Yt==-totrunc])*rnd)]
          +[i for i, e in enumerate(Yt) if e == -totrunc])
   Xt, Yt = Xt[idcs,:], Yt[idcs]
+
 #create the prior
 mu0 = np.zeros(D)
 Sig0 = np.eye(D)
@@ -184,7 +185,7 @@ else:
       pts = Y[idcs, np.newaxis]*pts
       p.append(pts)
       ls.append(Y[idcs])
-      print(alg.selected_groups, [demos[selgroup] for selgroup in alg.selected_groups])
+      print('selected groups info:', alg.selected_groups, [demos[selgroup] for selgroup in alg.selected_groups])
     else:
       w.append(np.array([0.]))
       p.append(np.zeros((1,D)))
@@ -204,13 +205,16 @@ if nm=='PRIOR':
     accs[m]= compute_accuracy(Xt, Yt, thetas)
     pll[m]=np.sum(log_likelihood(Yt[:, np.newaxis]*Xt,thetas))/float(Xt.shape[0]*thetas.shape[0])
 else:
-  ssize=200
+  ssize=500
   for m in range(1,M+1):
+    print('selected cx with shape : ', p[m][:, :-1].shape, ' and weights', w[m])
     # subsample for MCMC
-    ridx = np.random.choice(range(p[m][:, :-1].shape[0]), size=min(ssize, p[m][:, :-1].shape[0]))
-    cx, cy = p[m][:, :-1][ridx,:], ls[m].astype(int)[ridx]
+    #ridx = np.random.choice(range(p[m][:, :-1].shape[0]), size=min(ssize, p[m][:, :-1].shape[0]))
+    #cx, cy = p[m][:, :-1][ridx,:], ls[m].astype(int)[ridx]
+    #sampler_data = {'x': cx, 'y': cy, 'd': cx.shape[1], 'N': cx.shape[0], 'w': np.ones(w[m][ridx].shape[0])}
+    cx, cy = p[m][:, :-1], ls[m].astype(int)
     cy[cy==-1] = 0
-    sampler_data = {'x': cx, 'y': cy, 'd': cx.shape[1], 'N': cx.shape[0], 'w': np.ones(w[m][ridx].shape[0])}
+    sampler_data = {'x': cx, 'y': cy, 'd': cx.shape[1], 'N': cx.shape[0], 'w': w[m]}
     thd = sampler_data['d']+1
     fit = sml.sampling(data=sampler_data, iter=N_per*2, chains=1, control={'adapt_delta':0.9, 'max_treedepth':15}, verbose=False)
     thetas = np.roll(fit.extract(permuted=False)[:, 0, :thd], -1)
