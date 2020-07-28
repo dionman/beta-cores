@@ -16,14 +16,14 @@ import pystan
 np.random.seed(42)
 rnd = np.random.rand()
 
-beta=0.7
+beta=0.9
 nm = "BCORES"
 dnm = "adult"
 ID = 0
 graddiag = False # diagonal Gaussian assumption for coreset sampler
 riemann_coresets = ['SVI', 'BCORES']
 if nm in riemann_coresets: i0 = 1.0
-f_rate = 0
+f_rate = 0.1
 np.random.seed(int(ID))
 
 weighted_logistic_code = """
@@ -97,20 +97,33 @@ n_subsample_select = 1000
 projection_dim = 100 #random projection dimension
 #SVI_opt_itrs = 500
 #BPSVI_opt_itrs = 500
-BCORES_opt_itrs = 500
+BCORES_opt_itrs = 1000
 sz = 1000
 ###############################
 
 print('Loading dataset '+dnm)
 X, Y, Xt, Yt = load_data('../data/'+dnm+'.npz') # read train and test data
 X, Y, Z, x_mean, x_std = std_cov(X, Y) # standardize covariates
-if f_rate>0: X, Y, Z = perturb(X, Y, f_rate=f_rate)# corrupt datapoints
+#if f_rate>0: X, Y, Z, outidx = perturb(X, Y, f_rate=f_rate)# corrupt datapoints
 N, D = X.shape
 
-f = open('../data/groups_sensemake_adult.pk', 'rb')
+#print(Z.shape)
+#exit()
+f = open('../data/vq_groups_sensemake_adult.pk', 'rb')
 res = pk.load(f) #(w, p, accs, pll)
 f.close()
 (groups, demos)=res
+
+groups = [[k for k in g if k<Z.shape[0]] for g in groups]
+
+if f_rate>0:
+  for (g,d) in zip(groups,demos):
+    #print(g, d)
+    X[g,:], Y[g], Z[g,:], _ = perturb(X[g,:], Y[g], f_rate=d[0]*f_rate)
+    #input()#if f_rate>0: X, Y, Z, outidx = perturb(X, Y, f_rate=f_rate)
+
+#print([len(g) for g in groups])
+#exit()
 
 # make sure test set is adequate for evaluation via the predictive accuracy metric
 if len(Yt[Yt==1])>0.55*len(Yt) or len(Yt[Yt==1])<0.45*len(Yt): # truncate for balanced test dataset
@@ -143,6 +156,8 @@ print('Creating coresets object')
 #unif = bc.UniformSamplingCoreset(Z, groups=groups)
 #sparsevi = bc.SparseVICoreset(Z, prj_w, opt_itrs = SVI_opt_itrs, n_subsample_opt = n_subsample_opt,
 #                              n_subsample_select = None, step_sched = SVI_step_sched, groups=groups)
+#print(Z.shape[0], [max(g) for g in groups])
+#exit()
 bcoresvi = bc.BetaCoreset(Z, prj_bw, opt_itrs = BCORES_opt_itrs, n_subsample_opt = n_subsample_opt,
                           n_subsample_select = None, step_sched = BCORES_step_sched,
                           beta = beta, learn_beta=False, groups=groups)
@@ -181,6 +196,9 @@ else:
         wts, pts, idcs, beta = alg.get()
       else:
         wts, pts, idcs = alg.get()
+      #selout=[idx for idx in idcs if idx in outidx]
+      #print('selected outliers : ',  len(selout))
+      #print('with weights : ', [wts[np.where(idcs==idx)[0]] for idx in selout], '\n\n')
       w.append(wts)
       pts = Y[idcs, np.newaxis]*pts
       p.append(pts)

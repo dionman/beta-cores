@@ -19,7 +19,7 @@ def load_dataset(path, urls):
 
 def demographic_groups(df, cap=50):
   ages = [(0,25), (25,30), (30,35), (35,40), (40,45), (45,55), (55,max(df['age']))]
-  race = set(df['race'])
+  race = set(df['race']); race.remove('Other')
   gender = set(df['sex'])
   groups=[]
   for (a,r,g) in itertools.product(ages, race, gender):
@@ -30,6 +30,27 @@ def demographic_groups(df, cap=50):
   pk.dump( (groups,list(itertools.product(ages, race, gender))), f)
   f.close()
   return
+
+def vq_demographic_groups(df, cap=50):
+  ages = [(0,25), (25,30), (30,35), (35,40), (40,45), (45,55), (55,max(df['age']))]
+  race = set(df['race'])
+  race = set(df['race']); race.remove('Other')
+  gender = set(df['sex'])
+  groups=[]
+  quality = [0,1,2]
+  for (q,a,r,g) in itertools.product(quality, ages, race, gender):
+    ng = df.index[(df['race']==r)&(df['sex']==g)&(a[0]<df['age'])&(df['age']<=a[1])].tolist()
+    print(len(ng), a, r, g)
+    if len(ng)>=3*cap:
+      groups+=[[df.index.get_loc(n) for n in ng[q*cap:(q+1)*cap]]]
+    else:
+      groups+=[[df.index.get_loc(n) for n in ng[int(q*float(len(ng))/3.):int((q+1)*float(len(ng))/3.)]]]
+  #save results
+  f = open('vq_groups_sensemake_adult.pk', 'wb')
+  pk.dump( (groups,list(itertools.product(quality, ages, race, gender))), f)
+  f.close()
+  return
+
 
 urls = ["http://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data",
         "https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.names",
@@ -50,6 +71,8 @@ y = [-1 if s=='<=50K' else 1 for s in train_data["income"]]
 yt = [-1 if s=='<=50K.' else 1 for s in test_data["income"]]
 
 demographic_groups(X)
+vq_demographic_groups(X)
+
 # numerical columns : standardize
 numcols = ['age', 'education-num', 'capital-gain', 'capital-loss','hours-per-week']
 ss=StandardScaler()
