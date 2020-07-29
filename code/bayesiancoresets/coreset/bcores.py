@@ -49,7 +49,10 @@ class BetaCoreset(Coreset):
       corevecs = self.ll_projector.project_f(self.pts, beta)
     else:
       corevecs = np.zeros((0, vecs.shape[1]))
-    return vecs[~np.all(vecs == 0., axis=1)], sum_scaling, sub_idcs, corevecs
+    if self.groups is None:
+      return vecs[~np.all(vecs == 0., axis=1)], sum_scaling, sub_idcs, corevecs
+    else:
+      return vecs, sum_scaling, sub_idcs, corevecs
 
   def _get_projection_ii(self, n_subsample, w, p, beta): # projections need for beta - gradient computation (unused at the moment)
     #update the projector
@@ -105,7 +108,6 @@ class BetaCoreset(Coreset):
       #get the best selection; if it's an old coreset pt do nothing, if it's a new point expand and initialize storage for the new pt
       if corecorrs.size == 0 or corrs.max() > corecorrs.max():
         f = sub_idcs[self.group[np.argmax(corrs)]] if sub_idcs is not None else np.argmax(corrs)
-        print(f)
         if f not in self.selected_groups: self.selected_groups.append(f)
         #expand and initialize storage for new coreset pt
         #need to double-check that f isn't in self.idcs, since the subsample may contain some of the coreset pts
@@ -117,7 +119,7 @@ class BetaCoreset(Coreset):
           self.wts[-newpoints.shape[0]:] = [0.]*newpoints.shape[0]
           self.idcs[-newpoints.shape[0]:] = self.groups[f]
           self.pts[-newpoints.shape[0]:,:] = newpoints
-      print(self.idcs.shape)
+      print('idcs and pts shapes : ', self.idcs.shape, self.pts.shape)
     return
 
   def _optimize(self):
