@@ -31,7 +31,7 @@ class BetaCoreset(Coreset):
       #update the weights
       self._optimize()
 
-  def _get_projection(self, n_subsample, w, p, beta):
+  def _get_projection(self, n_subsample, w, p, beta, select=False):
     #update the projector
     self.ll_projector.update(w, p)
     #construct a tangent space
@@ -49,7 +49,7 @@ class BetaCoreset(Coreset):
       corevecs = self.ll_projector.project_f(self.pts, beta)
     else:
       corevecs = np.zeros((0, vecs.shape[1]))
-    if self.groups is None:
+    if self.groups is None and select:
       return vecs[~np.all(vecs == 0., axis=1)], sum_scaling, sub_idcs, corevecs
     else:
       return vecs, sum_scaling, sub_idcs, corevecs
@@ -96,15 +96,16 @@ class BetaCoreset(Coreset):
           self.idcs[-1] = f
           self.pts[-1] = self.data[f]
     else: # add new group to the coreset
-      vecs, sum_scaling, sub_idcs, corevecs = self._get_projection(self.n_subsample_select, self.wts, self.pts, self.beta)
-      #compute the residual error
-      resid = sum_scaling*vecs.sum(axis=0) - self.wts.dot(corevecs)
+      vecs, sum_scaling, sub_idcs, corevecs = self._get_projection(self.n_subsample_select, self.wts, self.pts, self.beta, select=True)
       groupvecs = np.asarray([vecs[idx,:].sum(axis=0) for idx in self.groups])
+      #compute the residual error
+      resid = sum_scaling*groupvecs.sum(axis=0) - self.wts.dot(corevecs)
+      #resid = sum_scaling*vecs.sum(axis=0) - self.wts.dot(corevecs)
       #compute the correlations for the new subsample
       corrs = groupvecs.dot(resid) / np.sqrt((groupvecs**2).sum(axis=1)) / groupvecs.shape[1] #up to a constant; good enough for argmax
       #compute the correlations for the coreset pts (use fabs because we can decrease the weight of these)
       corecorrs = np.fabs(corevecs.dot(resid) / np.sqrt((corevecs**2).sum(axis=1))) / corevecs.shape[1] #up to a constant; good enough for argmax
-      if corecorrs.size>0: print(corecorrs.max(), corrs.max(), corecorrs.shape, corrs.shape)
+      if corecorrs.size>0: print('corecorrs and corrs shape : ', corecorrs.shape, corrs.shape)
       #get the best selection; if it's an old coreset pt do nothing, if it's a new point expand and initialize storage for the new pt
       if corecorrs.size == 0 or corrs.max() > corecorrs.max():
         f = sub_idcs[self.group[np.argmax(corrs)]] if sub_idcs is not None else np.argmax(corrs)

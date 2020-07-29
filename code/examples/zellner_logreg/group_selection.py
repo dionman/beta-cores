@@ -21,6 +21,7 @@ nm = "BCORES"
 dnm = "adult"
 ID = 0
 graddiag = False # diagonal Gaussian assumption for coreset sampler
+structured=False
 riemann_coresets = ['SVI', 'BCORES']
 if nm in riemann_coresets: i0 = 1.0
 f_rate = 0.1
@@ -92,12 +93,12 @@ SVI_step_sched = lambda itr : i0/(1.+itr)
 BPSVI_step_sched = lambda m: lambda itr : i0/(1.+itr) # make step schedule potentially dependent on coreset size
 BCORES_step_sched = lambda itr : i0/(1.+itr)
 
-n_subsample_opt = 200
+n_subsample_opt = 1000
 n_subsample_select = 1000
-projection_dim = 100 #random projection dimension
+projection_dim = 200 #random projection dimension
 #SVI_opt_itrs = 500
 #BPSVI_opt_itrs = 500
-BCORES_opt_itrs = 1000
+BCORES_opt_itrs = 500
 sz = 1000
 ###############################
 
@@ -115,11 +116,13 @@ f.close()
 (groups, demos)=res
 
 groups = [[k for k in g if k<Z.shape[0]] for g in groups]
+grouptot = sum([len(g) for g in groups])
+
 
 if f_rate>0:
   for (g,d) in zip(groups,demos):
-    #print(g, d)
-    X[g,:], Y[g], Z[g,:], _ = perturb(X[g,:], Y[g], f_rate=d[0]*f_rate)
+    print(len(g), d, d[0])
+    X[g,:], Y[g], Z[g,:], _ = perturb(X[g,:], Y[g], f_rate=0.*d[0]*f_rate, structured=structured, noise_x=(0,10))
     #input()#if f_rate>0: X, Y, Z, outidx = perturb(X, Y, f_rate=f_rate)
 
 #print([len(g) for g in groups])
@@ -133,6 +136,7 @@ if len(Yt[Yt==1])>0.55*len(Yt) or len(Yt[Yt==1])<0.45*len(Yt): # truncate for ba
   idcs = ([i for i, e in enumerate(Yt) if e == totrunc][:len(Yt[Yt==-totrunc])+int(0.01*len(Yt[Yt==-totrunc])*rnd)]
          +[i for i, e in enumerate(Yt) if e == -totrunc])
   Xt, Yt = Xt[idcs,:], Yt[idcs]
+Xt, Yt, _, _, _ = std_cov(Xt, Yt, mean_=x_mean, std_=x_std) # standardize covariates for test data
 
 #create the prior
 mu0 = np.zeros(D)

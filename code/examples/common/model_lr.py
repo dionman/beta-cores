@@ -44,6 +44,7 @@ def compute_accuracy(Xt, Yt, thetas):
 def perturb(X_train, y_train, noise_x=(0,5), f_rate=0.1, flip=True, structured=False, mean_val=0.1, std_val=1., theta_val=-1.):
   N, D = X_train.shape
   o = np.int(N*f_rate)
+  print('o=',o)
   idxx = np.random.choice(N, size=o)
   if not structured: # random noise/mislabeling in input/output space
     idxy = np.random.choice(N, size=o)
@@ -55,6 +56,7 @@ def perturb(X_train, y_train, noise_x=(0,5), f_rate=0.1, flip=True, structured=F
   else: # structured perturbation for desirable decision boundary
     X_train[idxx,:], y_train[idxx], _, _ = gen_synthetic(o, d=D, mean_val=mean_val, std_val=std_val, theta_val=theta_val) 
   outidx = np.unique(np.concatenate([idxx, idxy]))
+  print('after perturbations : ', X_train, y_train)
   return X_train, y_train, y_train[:, np.newaxis]*X_train, outidx
 
 def gen_synthetic(n, d=2, mean_val=1., std_val=1., theta_val=1.):
@@ -80,6 +82,7 @@ def beta_likelihood(z, th, beta):
   z = np.atleast_2d(z)
   th = np.atleast_2d(th)
   m = -z.dot(th.T)
+  #print(np.max(m), np.min(m))
   m = -(((beta+1.)/beta)*(1+np.exp(m))**(-beta) - ((1+np.exp(m))**(-beta-1.) + (1+np.exp(-m))**(-beta-1.)))
   return m
 

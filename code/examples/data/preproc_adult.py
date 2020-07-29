@@ -31,10 +31,10 @@ def demographic_groups(df, cap=50):
   f.close()
   return
 
-def vq_demographic_groups(df, cap=50):
+def vq_demographic_groups(df, cap=100):
   ages = [(0,25), (25,30), (30,35), (35,40), (40,45), (45,55), (55,max(df['age']))]
   race = set(df['race'])
-  race = set(df['race']); race.remove('Other')
+  race = set(df['race']); race.remove('Other'); race.remove('Asian-Pac-Islander'); race.remove('Amer-Indian-Eskimo')
   gender = set(df['sex'])
   groups=[]
   quality = [0,1,2]
