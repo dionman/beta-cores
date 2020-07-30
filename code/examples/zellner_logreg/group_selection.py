@@ -16,15 +16,26 @@ import pystan
 np.random.seed(42)
 rnd = np.random.rand()
 
-beta=0.9
-nm = "BCORES"
+def linearize():
+  args_dict = dict()
+  c=-1
+  for beta in [0.9]:
+    for ID in range(10):
+      for f_rate in [0, 0.1]:
+        for nm in ['BCORES', 'RAND', 'DShapley']:
+          c+=1
+          args_dict[c] = (ID, f_rate, beta)
+  return args_dict
+
+mapping = linearize()
+ID, nm, f_rate, beta = mapping[int(sys.argv[1])]
+#ID, nm, f_rate, beta = mapping[0]
+
 dnm = "diabetes" #"adult"
-ID = 0
 graddiag = False # diagonal Gaussian assumption for coreset sampler
-structured=False
+structured = False
 riemann_coresets = ['SVI', 'BCORES']
 if nm in riemann_coresets: i0 = 1.0
-f_rate = 0.1
 np.random.seed(int(ID))
 
 weighted_logistic_code = """
@@ -89,15 +100,10 @@ def get_laplace(wts, Z, mu0, diag=False):
 ###############################
 ## TUNING PARAMETERS ##
 M = 10
-SVI_step_sched = lambda itr : i0/(1.+itr)
-BPSVI_step_sched = lambda m: lambda itr : i0/(1.+itr) # make step schedule potentially dependent on coreset size
 BCORES_step_sched = lambda itr : i0/(1.+itr)
-
 n_subsample_opt = 1000
 n_subsample_select = 1000
 projection_dim = 200 #random projection dimension
-#SVI_opt_itrs = 500
-#BPSVI_opt_itrs = 500
 BCORES_opt_itrs = 500
 sz = 1000
 ###############################
@@ -105,11 +111,8 @@ sz = 1000
 print('Loading dataset '+dnm)
 X, Y, Xt, Yt = load_data('../data/'+dnm+'.npz') # read train and test data
 X, Y, Z, x_mean, x_std = std_cov(X, Y) # standardize covariates
-#if f_rate>0: X, Y, Z, outidx = perturb(X, Y, f_rate=f_rate)# corrupt datapoints
 N, D = X.shape
 
-#print(Z.shape)
-#exit()
 f = open('../data/vq_groups_sensemake_diabetes.pk', 'rb')
 res = pk.load(f) #(w, p, accs, pll)
 f.close()
@@ -118,15 +121,10 @@ f.close()
 groups = [[k for k in g if k<Z.shape[0]] for g in groups]
 grouptot = sum([len(g) for g in groups])
 
-
 if f_rate>0:
   for (g,d) in zip(groups,demos):
     print(len(g), d, d[0])
     X[g,:], Y[g], Z[g,:], _ = perturb(X[g,:], Y[g], f_rate=2*d[0]*f_rate, structured=structured, noise_x=(0,10))
-    #input()#if f_rate>0: X, Y, Z, outidx = perturb(X, Y, f_rate=f_rate)
-
-#print([len(g) for g in groups])
-#exit()
 
 # make sure test set is adequate for evaluation via the predictive accuracy metric
 if len(Yt[Yt==1])>0.55*len(Yt) or len(Yt[Yt==1])<0.45*len(Yt): # truncate for balanced test dataset
@@ -151,23 +149,14 @@ def sampler_w(sz, w, pts, diag=graddiag):
   return muw + np.random.randn(sz, muw.shape[0]).dot(LSigw.T)
 
 grad_beta = lambda x, th, beta : gaussian_beta_gradient(x, th, beta, Siginv, logdetSig)
-prj_w = bc.BlackBoxProjector(sampler_w, projection_dim, log_likelihood, grad_z_log_likelihood)
 prj_bw = bc.BetaBlackBoxProjector(sampler_w, projection_dim, beta_likelihood, beta_likelihood, grad_beta)
 
 print('Creating coresets object')
-#create coreset construction objects
 
-#unif = bc.UniformSamplingCoreset(Z, groups=groups)
-#sparsevi = bc.SparseVICoreset(Z, prj_w, opt_itrs = SVI_opt_itrs, n_subsample_opt = n_subsample_opt,
-#                              n_subsample_select = None, step_sched = SVI_step_sched, groups=groups)
-#print(Z.shape[0], [max(g) for g in groups])
-#exit()
 bcoresvi = bc.BetaCoreset(Z, prj_bw, opt_itrs = BCORES_opt_itrs, n_subsample_opt = n_subsample_opt,
                           n_subsample_select = None, step_sched = BCORES_step_sched,
                           beta = beta, learn_beta=False, groups=groups)
 algs = {'BCORES': bcoresvi,
-        #'SVI': sparsevi,
-        #'RAND': unif,
         'PRIOR': None}
 alg = algs[nm]
 
@@ -176,41 +165,23 @@ w = [np.array([0.])]
 p = [np.zeros((1, Z.shape[1]))]
 ls = [np.array([0.])]
 
-def build_per_m(m): # construction in parallel for different coreset sizes used in BPSVI
-  alg.build(1, m)
-  return alg.get()
-
-if nm in ['BPSVI']:
-  pool = Pool(processes=100)
-  res = pool.map(build_per_m, range(1, M+1))
-  i=1
-  for (wts, pts, idcs) in res:
+for m in range(1, M+1):
+  print('m = ', m)
+  if nm != 'PRIOR':
+    alg.build(1, N)
+    #record weights
+    if nm=='BCORES':
+      wts, pts, idcs, beta = alg.get()
+    else:
+      wts, pts, idcs = alg.get()
     w.append(wts)
     pts = Y[idcs, np.newaxis]*pts
     p.append(pts)
     ls.append(Y[idcs])
-    i+=1
-else:
-  for m in range(1, M+1):
-    print('m = ', m)
-    if nm != 'PRIOR':
-      alg.build(1, N)
-      #record weights
-      if nm=='BCORES':
-        wts, pts, idcs, beta = alg.get()
-      else:
-        wts, pts, idcs = alg.get()
-      #selout=[idx for idx in idcs if idx in outidx]
-      #print('selected outliers : ',  len(selout))
-      #print('with weights : ', [wts[np.where(idcs==idx)[0]] for idx in selout], '\n\n')
-      w.append(wts)
-      pts = Y[idcs, np.newaxis]*pts
-      p.append(pts)
-      ls.append(Y[idcs])
-      print('selected groups info:', alg.selected_groups, [demos[selgroup] for selgroup in alg.selected_groups])
-    else:
-      w.append(np.array([0.]))
-      p.append(np.zeros((1,D)))
+    print('selected groups info:', alg.selected_groups, [demos[selgroup] for selgroup in alg.selected_groups])
+  else:
+    w.append(np.array([0.]))
+    p.append(np.zeros((1,D)))
 
 N_per = 1000
 
@@ -231,9 +202,6 @@ else:
   for m in range(1,M+1):
     print('selected cx with shape : ', p[m][:, :-1].shape, ' and weights', w[m])
     # subsample for MCMC
-    #ridx = np.random.choice(range(p[m][:, :-1].shape[0]), size=min(ssize, p[m][:, :-1].shape[0]))
-    #cx, cy = p[m][:, :-1][ridx,:], ls[m].astype(int)[ridx]
-    #sampler_data = {'x': cx, 'y': cy, 'd': cx.shape[1], 'N': cx.shape[0], 'w': np.ones(w[m][ridx].shape[0])}
     cx, cy = p[m][:, :-1], ls[m].astype(int)
     cy[cy==-1] = 0
     sampler_data = {'x': cx, 'y': cy, 'd': cx.shape[1], 'N': cx.shape[0], 'w': w[m]}
@@ -250,3 +218,5 @@ f = open('/home/dm754/rds/hpc-work/zellner_logreg/group_results/'+dnm+'_'+nm+'_'
 res = (w, p, accs, pll)
 pk.dump(res, f)
 f.close()
+
+
