@@ -15,6 +15,7 @@ import pystan
 # specify random number only for test size randomization (common across trials)
 np.random.seed(42)
 rnd = np.random.rand()
+flatten = lambda l: [item for sublist in l for item in sublist]
 
 def linearize():
   args_dict = dict()
@@ -22,9 +23,9 @@ def linearize():
   for beta in [0.9]:
     for ID in range(10):
       for f_rate in [0, 0.1]:
-        for nm in ['BCORES', 'RAND', 'DShapley']:
+        for nm in ['RAND', 'DShapley', 'BCORES']:
           c+=1
-          args_dict[c] = (ID, f_rate, beta)
+          args_dict[c] = (ID, nm, f_rate, beta)
   return args_dict
 
 mapping = linearize()
@@ -106,6 +107,7 @@ n_subsample_select = 1000
 projection_dim = 200 #random projection dimension
 BCORES_opt_itrs = 500
 sz = 1000
+N_per = 1000
 ###############################
 
 print('Loading dataset '+dnm)
@@ -117,13 +119,11 @@ f = open('../data/vq_groups_sensemake_diabetes.pk', 'rb')
 res = pk.load(f) #(w, p, accs, pll)
 f.close()
 (groups, demos)=res
-
 groups = [[k for k in g if k<Z.shape[0]] for g in groups]
 grouptot = sum([len(g) for g in groups])
 
 if f_rate>0:
   for (g,d) in zip(groups,demos):
-    print(len(g), d, d[0])
     X[g,:], Y[g], Z[g,:], _ = perturb(X[g,:], Y[g], f_rate=2*d[0]*f_rate, structured=structured, noise_x=(0,10))
 
 # make sure test set is adequate for evaluation via the predictive accuracy metric
@@ -135,6 +135,36 @@ if len(Yt[Yt==1])>0.55*len(Yt) or len(Yt[Yt==1])<0.45*len(Yt): # truncate for ba
          +[i for i, e in enumerate(Yt) if e == -totrunc])
   Xt, Yt = Xt[idcs,:], Yt[idcs]
 Xt, Yt, _, _, _ = std_cov(Xt, Yt, mean_=x_mean, std_=x_std) # standardize covariates for test data
+
+####################################################################
+# functions used in DShapley and RAND
+def update_per_t(t, maxGroups=20):
+  phis = np.zeros(len(groups),) # initialize Shapley values for all groups to zero
+  vs = np.zeros(len(groups)+1,) # values for group combinations for all groups to zero
+  idcs = np.random.permutation(len(groups))
+  for j in range(maxGroups):
+    datapoints = flatten([groups[idx] for idx in idcs[:j]])
+    vs[j+1] = eval(datapoints, X, Y, Xt, Yt)
+    phis[idcs[j]] += (vs[j+1]-vs[j]) # add new marginal for group idcs[j]
+  return phis
+
+def dshapley(groups, X, Y, Xt, Yt, T=500):
+  pool = Pool(processes=10)
+  res = pool.map(update_per_t, range(T))
+  phis = np.mean(res, axis=0)
+  return phis
+
+def eval(idcs, X, Y, Xt, Yt, N_per=1000):
+  cx, cy = X[idcs][:, :-1], Y[idcs].astype(int)
+  cy[cy==-1] = 0
+  sampler_data = {'x': cx, 'y': cy, 'd': cx.shape[1], 'N': cx.shape[0], 'w': np.ones(cx.shape[0])}
+  thd = sampler_data['d']+1
+  fit = sml.sampling(data=sampler_data, iter=N_per*2, chains=1, control={'adapt_delta':0.9, 'max_treedepth':15}, verbose=False)
+  thetas = np.roll(fit.extract(permuted=False)[:, 0, :thd], -1)
+  acc = compute_accuracy(Xt, Yt, thetas)
+  return acc
+####################################################################
+
 
 #create the prior
 mu0 = np.zeros(D)
@@ -160,63 +190,69 @@ algs = {'BCORES': bcoresvi,
         'PRIOR': None}
 alg = algs[nm]
 
-print('Building coresets via ' + nm)
-w = [np.array([0.])]
-p = [np.zeros((1, Z.shape[1]))]
-ls = [np.array([0.])]
 
-for m in range(1, M+1):
-  print('m = ', m)
-  if nm != 'PRIOR':
-    alg.build(1, N)
-    #record weights
-    if nm=='BCORES':
-      wts, pts, idcs, beta = alg.get()
+if nm=='BCORES':
+  print('Building coresets via ' + nm)
+  w = [np.array([0.])]
+  p = [np.zeros((1, Z.shape[1]))]
+
+  for m in range(1, M+1):
+    print('m = ', m)
+    if nm != 'PRIOR':
+      alg.build(1, N)
+      #record weights
+      if nm=='BCORES':
+        wts, pts, idcs, beta = alg.get()
+      else:
+        wts, pts, idcs = alg.get()
+      w.append(wts)
+      pts = Y[idcs, np.newaxis]*pts
+      p.append(pts)
+      print('selected groups info:', alg.selected_groups, [demos[selgroup] for selgroup in alg.selected_groups])
     else:
-      wts, pts, idcs = alg.get()
-    w.append(wts)
-    pts = Y[idcs, np.newaxis]*pts
-    p.append(pts)
-    ls.append(Y[idcs])
-    print('selected groups info:', alg.selected_groups, [demos[selgroup] for selgroup in alg.selected_groups])
-  else:
-    w.append(np.array([0.]))
-    p.append(np.zeros((1,D)))
+      w.append(np.array([0.]))
+      p.append(np.zeros((1,D)))
 
-N_per = 1000
-
-accs = np.zeros(M+1)
-pll = np.zeros(M+1)
-
-print('Evaluation')
-if nm=='PRIOR':
-  sampler_data = {'x': np.zeros((1,D-1)), 'y': [0], 'd': D, 'N': 1, 'w': [0]}
-  thd = sampler_data['d']+1
-  fit = sml.sampling(data=sampler_data, iter=N_per*2, chains=1, control={'adapt_delta':0.9, 'max_treedepth':15}, verbose=False)
-  thetas = np.roll(fit.extract(permuted=False)[:, 0, :thd], -1)
-  for m in range(M+1):
-    accs[m]= compute_accuracy(Xt, Yt, thetas)
-    pll[m]=np.sum(log_likelihood(Yt[:, np.newaxis]*Xt,thetas))/float(Xt.shape[0]*thetas.shape[0])
-else:
-  ssize=500
-  for m in range(1,M+1):
-    print('selected cx with shape : ', p[m][:, :-1].shape, ' and weights', w[m])
-    # subsample for MCMC
-    cx, cy = p[m][:, :-1], ls[m].astype(int)
-    cy[cy==-1] = 0
-    sampler_data = {'x': cx, 'y': cy, 'd': cx.shape[1], 'N': cx.shape[0], 'w': w[m]}
+  accs = np.zeros(M+1)
+  print('Evaluation')
+  if nm=='PRIOR':
+    sampler_data = {'x': np.zeros((1,D-1)), 'y': [0], 'd': D, 'N': 1, 'w': [0]}
     thd = sampler_data['d']+1
     fit = sml.sampling(data=sampler_data, iter=N_per*2, chains=1, control={'adapt_delta':0.9, 'max_treedepth':15}, verbose=False)
     thetas = np.roll(fit.extract(permuted=False)[:, 0, :thd], -1)
-    accs[m]= compute_accuracy(Xt, Yt, thetas)
-    pll[m] = np.sum(log_likelihood(Yt[:, np.newaxis]*Xt, thetas))/float(Xt.shape[0]*thetas.shape[0])
-print('accuracies : ', accs)
-print('pll : ', pll)
+    for m in range(M+1):
+      accs[m]= compute_accuracy(Xt, Yt, thetas)
+  else:
+    for m in range(1,M+1):
+      print('selected cx with shape : ', p[m][:, :-1].shape, ' and weights', w[m])
+      # subsample for MCMC
+      cx, cy = p[m][:, :-1], ls[m].astype(int)
+      cy[cy==-1] = 0
+      sampler_data = {'x': cx, 'y': cy, 'd': cx.shape[1], 'N': cx.shape[0], 'w': w[m]}
+      thd = sampler_data['d']+1
+      fit = sml.sampling(data=sampler_data, iter=N_per*2, chains=1, control={'adapt_delta':0.9, 'max_treedepth':15}, verbose=False)
+      thetas = np.roll(fit.extract(permuted=False)[:, 0, :thd], -1)
+      accs[m]= compute_accuracy(Xt, Yt, thetas)
+  print('accuracies : ', accs)
+
+elif nm=='DShapley':
+  phis = dshapley(groups, X, Y, Xt, Yt)
+  sort_index = np.argsort(phis)[::-1]
+  selected_groups = sort_index # sort groups according to DShapley values and pick greedily
+  accs = np.zeros(M+1)
+  print('Evaluation')
+  for m in range(M):
+    accs[m] = eval(selected_groups[:m], X, Y, Xt, Yt, N_per=1000)
+  print('accuracies : ', accs)
+
+elif nm=='RAND':
+  selected_groups = np.random.permutation(len(groups)) # randomize order of groups
+  for m in range(M):
+    accs[m] = eval(selected_groups[:m], X, Y, Xt, Yt, N_per=1000)
+  print('accuracies : ', accs)
 
 #save results
-f = open('/home/dm754/rds/hpc-work/zellner_logreg/group_results/'+dnm+'_'+nm+'_'+str(f_rate)+'_'+str(i0)+'_'+str(graddiag)+'_results_'+str(ID)+'.pk', 'wb')
-res = (w, p, accs, pll)
+f = open('/home/dm754/rds/hpc-work/zellner_logreg/group_results/'+dnm+'_'+nm+'_'+str(f_rate)+'_results_'+str(ID)+'.pk', 'wb')
+res = (w, p, accs)
 pk.dump(res, f)
 f.close()
-
-
