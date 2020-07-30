@@ -18,7 +18,7 @@ rnd = np.random.rand()
 
 beta=0.9
 nm = "BCORES"
-dnm = "adult"
+dnm = "diabetes" #"adult"
 ID = 0
 graddiag = False # diagonal Gaussian assumption for coreset sampler
 structured=False
@@ -88,7 +88,7 @@ def get_laplace(wts, Z, mu0, diag=False):
 
 ###############################
 ## TUNING PARAMETERS ##
-M = 20
+M = 10
 SVI_step_sched = lambda itr : i0/(1.+itr)
 BPSVI_step_sched = lambda m: lambda itr : i0/(1.+itr) # make step schedule potentially dependent on coreset size
 BCORES_step_sched = lambda itr : i0/(1.+itr)
@@ -110,7 +110,7 @@ N, D = X.shape
 
 #print(Z.shape)
 #exit()
-f = open('../data/vq_groups_sensemake_adult.pk', 'rb')
+f = open('../data/vq_groups_sensemake_diabetes.pk', 'rb')
 res = pk.load(f) #(w, p, accs, pll)
 f.close()
 (groups, demos)=res
@@ -122,7 +122,7 @@ grouptot = sum([len(g) for g in groups])
 if f_rate>0:
   for (g,d) in zip(groups,demos):
     print(len(g), d, d[0])
-    X[g,:], Y[g], Z[g,:], _ = perturb(X[g,:], Y[g], f_rate=0.*d[0]*f_rate, structured=structured, noise_x=(0,10))
+    X[g,:], Y[g], Z[g,:], _ = perturb(X[g,:], Y[g], f_rate=2*d[0]*f_rate, structured=structured, noise_x=(0,10))
     #input()#if f_rate>0: X, Y, Z, outidx = perturb(X, Y, f_rate=f_rate)
 
 #print([len(g) for g in groups])
