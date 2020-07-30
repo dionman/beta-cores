@@ -45,7 +45,7 @@ else:
   figs.append([fig, fig2])
 
 for alg in algs:
-  trials = [fn for fn in os.listdir(fldr_res) if fn.startswith(dnm+'_'+alg[0]+'_'+str(f_rate))]
+  trials = [fn for fn in os.listdir(fldr_res) if fn.startswith(dnm+'_'+alg[0]+'_'+str(f_rate)+'_')]
   print(trials)
   if len(trials) == 0:
     fig.line([], [], color=alg[2], legend_label=alg[1], line_width=10); fig.patch([], [], color=alg[2], legend_label=alg[1], alpha=0.3)
@@ -61,6 +61,7 @@ for alg in algs:
     accs[tridx] = res[0]
 
     #dem[tridx] = res[2]
+    print('\n\n', res[2][-1], '\n\n\n')
     cszs[tridx, :] = np.array([len(d) for d in res[1]])
 
   csz50 = np.percentile(cszs, 50, axis=0)
@@ -95,6 +96,7 @@ for alg in algs:
       accs[tridx] = res[0]
       #idcs[tridx] = res[1]
       #dem[tridx] = res[2]
+      print('\n\n', res[2][-1], '\n\n\n')
       cszs[tridx, :] = np.array([len(d) for d in res[1]])
 
     csz50 = np.percentile(cszs, 50, axis=0)
