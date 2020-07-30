@@ -165,7 +165,6 @@ def eval(idcs, X, Y, Xt, Yt, N_per=1000):
   return acc
 ####################################################################
 
-
 #create the prior
 mu0 = np.zeros(D)
 Sig0 = np.eye(D)
@@ -182,22 +181,24 @@ grad_beta = lambda x, th, beta : gaussian_beta_gradient(x, th, beta, Siginv, log
 prj_bw = bc.BetaBlackBoxProjector(sampler_w, projection_dim, beta_likelihood, beta_likelihood, grad_beta)
 
 print('Creating coresets object')
-
 bcoresvi = bc.BetaCoreset(Z, prj_bw, opt_itrs = BCORES_opt_itrs, n_subsample_opt = n_subsample_opt,
                           n_subsample_select = None, step_sched = BCORES_step_sched,
                           beta = beta, learn_beta=False, groups=groups)
-algs = {'BCORES': bcoresvi,
-        'PRIOR': None}
-alg = algs[nm]
-
+dem=[[]]
+idcs = [np.array([0.])]
+accs = np.zeros(M+1)
 
 if nm=='BCORES':
+  algs = {'BCORES': bcoresvi,
+          'PRIOR': None}
+  alg = algs[nm]
+
   print('Building coresets via ' + nm)
   w = [np.array([0.])]
   p = [np.zeros((1, Z.shape[1]))]
+  ls = [np.array([0.])]
 
   for m in range(1, M+1):
-    print('m = ', m)
     if nm != 'PRIOR':
       alg.build(1, N)
       #record weights
@@ -208,12 +209,13 @@ if nm=='BCORES':
       w.append(wts)
       pts = Y[idcs, np.newaxis]*pts
       p.append(pts)
-      print('selected groups info:', alg.selected_groups, [demos[selgroup] for selgroup in alg.selected_groups])
+      dem+=[[demos[selgroup] for selgroup in alg.selected_groups]]
+      ls.append(Y[idcs])
+      idcs.append(np.array(flatten([groups[idx] for idx in alg.selected_groups]))) 
     else:
       w.append(np.array([0.]))
       p.append(np.zeros((1,D)))
 
-  accs = np.zeros(M+1)
   print('Evaluation')
   if nm=='PRIOR':
     sampler_data = {'x': np.zeros((1,D-1)), 'y': [0], 'd': D, 'N': 1, 'w': [0]}
@@ -241,18 +243,22 @@ elif nm=='DShapley':
   selected_groups = sort_index # sort groups according to DShapley values and pick greedily
   accs = np.zeros(M+1)
   print('Evaluation')
-  for m in range(M):
+  for m in range(1,M+1):
     accs[m] = eval(selected_groups[:m], X, Y, Xt, Yt, N_per=1000)
+    dem+=[[demos[selgroup] for selgroup in selected_groups[:m]]]
+    idcs.append(np.array(flatten([groups[idx] for idx in selected_groups[:m]])))
   print('accuracies : ', accs)
 
 elif nm=='RAND':
   selected_groups = np.random.permutation(len(groups)) # randomize order of groups
-  for m in range(M):
+  for m in range(1,M+1):
     accs[m] = eval(selected_groups[:m], X, Y, Xt, Yt, N_per=1000)
+    dem+=[[demos[selgroup] for selgroup in selected_groups[:m]]]
+    idcs.append(np.array(flatten([groups[idx] for idx in selected_groups[:m]])))
   print('accuracies : ', accs)
 
 #save results
 f = open('/home/dm754/rds/hpc-work/zellner_logreg/group_results/'+dnm+'_'+nm+'_'+str(f_rate)+'_results_'+str(ID)+'.pk', 'wb')
-res = (w, p, accs)
+res = (accs, idcs, dem)
 pk.dump(res, f)
 f.close()
