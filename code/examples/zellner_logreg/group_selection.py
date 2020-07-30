@@ -21,7 +21,7 @@ def linearize():
   args_dict = dict()
   c=-1
   for beta in [0.9]:
-    for ID in range(10):
+    for ID in range(5):
       for f_rate in [0, 0.1]:
         for nm in ['RAND', 'DShapley', 'BCORES']:
           c+=1
@@ -138,7 +138,7 @@ Xt, Yt, _, _, _ = std_cov(Xt, Yt, mean_=x_mean, std_=x_std) # standardize covari
 
 ####################################################################
 # functions used in DShapley and RAND
-def update_per_t(t, maxGroups=20):
+def update_per_t(t, maxGroups=15):
   phis = np.zeros(len(groups),) # initialize Shapley values for all groups to zero
   vs = np.zeros(len(groups)+1,) # values for group combinations for all groups to zero
   idcs = np.random.permutation(len(groups))
@@ -185,7 +185,7 @@ bcoresvi = bc.BetaCoreset(Z, prj_bw, opt_itrs = BCORES_opt_itrs, n_subsample_opt
                           n_subsample_select = None, step_sched = BCORES_step_sched,
                           beta = beta, learn_beta=False, groups=groups)
 dem=[[]]
-idcs = [np.array([0.])]
+indices = [np.array([0.])]
 accs = np.zeros(M+1)
 
 if nm=='BCORES':
@@ -211,7 +211,7 @@ if nm=='BCORES':
       p.append(pts)
       dem+=[[demos[selgroup] for selgroup in alg.selected_groups]]
       ls.append(Y[idcs])
-      idcs.append(np.array(flatten([groups[idx] for idx in alg.selected_groups]))) 
+      indices.append(np.array(flatten([groups[idx] for idx in alg.selected_groups]))) 
     else:
       w.append(np.array([0.]))
       p.append(np.zeros((1,D)))
@@ -246,7 +246,7 @@ elif nm=='DShapley':
   for m in range(1,M+1):
     accs[m] = eval(selected_groups[:m], X, Y, Xt, Yt, N_per=1000)
     dem+=[[demos[selgroup] for selgroup in selected_groups[:m]]]
-    idcs.append(np.array(flatten([groups[idx] for idx in selected_groups[:m]])))
+    indices.append(np.array(flatten([groups[idx] for idx in selected_groups[:m]])))
   print('accuracies : ', accs)
 
 elif nm=='RAND':
@@ -254,11 +254,11 @@ elif nm=='RAND':
   for m in range(1,M+1):
     accs[m] = eval(selected_groups[:m], X, Y, Xt, Yt, N_per=1000)
     dem+=[[demos[selgroup] for selgroup in selected_groups[:m]]]
-    idcs.append(np.array(flatten([groups[idx] for idx in selected_groups[:m]])))
+    indices.append(np.array(flatten([groups[idx] for idx in selected_groups[:m]])))
   print('accuracies : ', accs)
 
 #save results
 f = open('/home/dm754/rds/hpc-work/zellner_logreg/group_results/'+dnm+'_'+nm+'_'+str(f_rate)+'_results_'+str(ID)+'.pk', 'wb')
-res = (accs, idcs, dem)
+res = (accs, indices, dem)
 pk.dump(res, f)
 f.close()
