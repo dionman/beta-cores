@@ -23,7 +23,7 @@ def linearize():
   for beta in [0.9]:
     for ID in range(5):
       for f_rate in [0, 0.1]:
-        for nm in ['BCORES']: #['RAND']: #['DShapley']: #['RAND', 'DShapley', 'BCORES']:
+        for nm in ['DShapley']: #['RAND', 'DShapley', 'BCORES']:
           c+=1
           args_dict[c] = (ID, nm, f_rate, beta)
   return args_dict
@@ -138,20 +138,25 @@ Xt, Yt, _, _, _ = std_cov(Xt, Yt, mean_=x_mean, std_=x_std) # standardize covari
 
 ####################################################################
 # functions used in DShapley and RAND
-def update_per_t(t, maxGroups=13):
+def update_per_t(t, maxGroups=15):
   phis = np.zeros(len(groups),) # initialize Shapley values for all groups to zero
+  occs = np.zeros(len(groups),)
   vs = np.zeros(len(groups)+1,) # values for group combinations for all groups to zero
   idcs = np.random.permutation(len(groups))
   for j in range(maxGroups):
     datapoints = flatten([groups[idx] for idx in idcs[:j]])
     vs[j+1] = eval(datapoints, X, Y, Xt, Yt)
-    phis[idcs[j]] += vs[j+1]-vs[j] # add new marginal for group idcs[j]
-  return phis
+    phis[idcs[j]] = vs[j+1]-vs[j] # add new marginal for group idcs[j]
+    occs[idcs[j]]+=1 
+  return phis, occs
 
-def dshapley(groups, X, Y, Xt, Yt, T=1000):
+def dshapley(groups, X, Y, Xt, Yt, T=2000):
   pool = Pool(processes=100)
-  res = pool.map(update_per_t, range(T))
-  phis = np.mean(res, axis=0)
+  res, occs = pool.map(update_per_t, range(T))
+  res = np.sum(res, axis=0)
+  print('res : ', res)
+  occs = np.sum(occs, axis=0)
+  phis = np.divide(res, occs, out=np.zeros_like(res), where=occs!=0)
   return phis
 
 def eval(idcs, X, Y, Xt, Yt, N_per=1000):
@@ -226,11 +231,7 @@ if nm=='BCORES':
       accs[m]= compute_accuracy(Xt, Yt, thetas)
   else:
     # sample from prior for coreset size 0
-    sampler_data = {'x': np.zeros((1,D-1)), 'y': [0], 'd': D, 'N': 1, 'w': [0]}
-    thd = sampler_data['d']+1
-    fit = sml.sampling(data=sampler_data, iter=N_per*2, chains=1, control={'adapt_delta':0.9, 'max_treedepth':15}, verbose=False)
-    thetas = np.roll(fit.extract(permuted=False)[:, 0, :thd], -1)
-    accs[0]= compute_accuracy(Xt, Yt, thetas)
+    accs[0] = eval([], X, Y, Xt, Yt, N_per=1000)
     for m in range(1,M+1):
       print('selected cx with shape : ', p[m][:, :-1].shape, ' and weights', w[m])
       # subsample for MCMC
