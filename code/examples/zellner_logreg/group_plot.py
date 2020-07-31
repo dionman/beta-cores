@@ -18,13 +18,13 @@ fldr_figs='figs'
 fldr_res='group_results'
 beta=0.9
 i0=1.0
-f_rate=0
+f_rate=0.1
 graddiag=str(False)
 M=10
 
 plot_0=False # plot baseline for zero corruption
 
-algs = [('RAND', 'Random', pal[3])] #[('BCORES', 'β-Cores', pal[0]), ('DShapley', 'Data Shapley', pal[1])#, ('RAND', 'Random', pal[3])] #
+algs = [('RAND', 'Random', pal[3]), ('BCORES', 'β-Cores', pal[0]), ('DShapley', 'Data Shapley', pal[1])] #, ('RAND', 'Random', pal[3])] #
 fldr_figs = 'figs'
 if not os.path.exists(fldr_figs):
   os.mkdir(fldr_figs)
@@ -54,17 +54,25 @@ for alg in algs:
   accs = np.zeros((len(trials), M+1))
   #dem = np.zeros((len(trials), M+1))
   cszs = np.zeros((len(trials), M+1))
+  numgroups = np.zeros((len(trials), M+1))
   for tridx, fn in enumerate(trials):
     f = open(os.path.join(fldr_res,fn), 'rb')
     res = pk.load(f) #(w, p, accs, pll)
     f.close()
     accs[tridx] = res[0]
-    print('res shapes : ', len(res[0]), len(res[1]), len(res[2]))
+    print(res[1])
 
 
     #dem[tridx] = res[2]
-    print('\n\n', res[2][-1], '\n\n\n', [len(d) for d in res[1][1:]])
-    cszs[tridx, :] = np.array([len(d) for d in res[1][1:]])
+    if alg[0]=='BCORES':
+      print('\n\n', res[2][-1], '\n\n\n', [len(d) for d in res[1]])
+      cszs[tridx, :] = np.array([len(d) for d in res[1]])
+      numgroups[tridx,:] = [len(set(r)) for r in res[2]]
+    else:
+      print('\n\n', res[2][-1], '\n\n\n', [len(d) for d in res[1][1:]])
+      cszs[tridx, :] = np.array([len(d) for d in res[1][1:]])
+      numgroups[tridx,:] = [len(set(r)) for r in res[2][1:]]
+
 
   csz50 = np.percentile(cszs, 50, axis=0)
   csz25 = np.percentile(cszs, 25, axis=0)
@@ -74,11 +82,15 @@ for alg in algs:
   acc25 = np.percentile(accs, 25, axis=0)
   acc75 = np.percentile(accs, 75, axis=0)
 
-  fig.line(np.arange(acc50.shape[0]), acc50, color=alg[2], legend_label=alg[1], line_width=10)
+  numg50 = np.percentile(numgroups, 50, axis=0)
+  numg25 = np.percentile(numgroups, 25, axis=0)
+  numg75 = np.percentile(numgroups, 75, axis=0)
+
+  fig.line(numg50, acc50, color=alg[2], legend_label=alg[1], line_width=10)
   #fig.line(np.arange(acc25.shape[0]), acc25, color=alg[2], legend_label=alg[1], line_width=10, line_dash='dashed')
   #fig.line(np.arange(acc75.shape[0]), acc75, color=alg[2], legend_label=alg[1], line_width=10, line_dash='dashed')
 
-  fig.patch(np.hstack((np.arange(acc25.shape[0]), np.arange(acc25.shape[0])[::-1])), np.hstack((acc75, acc25[::-1])), fill_color=alg[2], legend_label=alg[1], alpha=0.3)
+  fig.patch(np.hstack((numg50, numg50[::-1])), np.hstack((acc75, acc25[::-1])), fill_color=alg[2], legend_label=alg[1], alpha=0.3)
 
 
   if alg[0] != 'PRIOR':
@@ -108,6 +120,10 @@ for alg in algs:
     acc50 = np.percentile(accs, 50, axis=0)
     acc25 = np.percentile(accs, 25, axis=0)
     acc75 = np.percentile(accs, 75, axis=0)
+
+    numg50 = np.percentile(numgroups, 50, axis=0)
+    numg25 = np.percentile(numgroups, 25, axis=0)
+    numg75 = np.percentile(numgroups, 75, axis=0)
 
 
     fig.line(np.arange(acc50.shape[0]), acc50, color=alg[2], legend_label=alg[1], line_width=10)
