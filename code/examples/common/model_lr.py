@@ -9,7 +9,7 @@ def load_data(dnm, ttr=0.2):
   data = np.load(dnm, allow_pickle=True)
   X = data['X']
   Y = data['y']
-  if (data['Xt'] is not None) and (data['yt'] is not None):
+  if not (data['Xt'].size in [0,1]) and not (data['yt'].size in [0,1]):
     Xt, Yt = data['Xt'], data['yt']
   else:
     test_size = int(ttr*X.shape[0])
