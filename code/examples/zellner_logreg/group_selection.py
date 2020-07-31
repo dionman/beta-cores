@@ -23,7 +23,7 @@ def linearize():
   for beta in [0.9]:
     for ID in range(5):
       for f_rate in [0, 0.1]:
-        for nm in ['RAND', 'DShapley', 'BCORES']:
+        for nm in ['BCORES']: #['RAND']: #['DShapley']: #['RAND', 'DShapley', 'BCORES']:
           c+=1
           args_dict[c] = (ID, nm, f_rate, beta)
   return args_dict
@@ -116,7 +116,7 @@ X, Y, Z, x_mean, x_std = std_cov(X, Y) # standardize covariates
 N, D = X.shape
 
 f = open('../data/vq_groups_sensemake_diabetes.pk', 'rb')
-res = pk.load(f) #(w, p, accs, pll)
+res = pk.load(f) 
 f.close()
 (groups, demos)=res
 groups = [[k for k in g if k<Z.shape[0]] for g in groups]
@@ -138,18 +138,18 @@ Xt, Yt, _, _, _ = std_cov(Xt, Yt, mean_=x_mean, std_=x_std) # standardize covari
 
 ####################################################################
 # functions used in DShapley and RAND
-def update_per_t(t, maxGroups=15):
+def update_per_t(t, maxGroups=13):
   phis = np.zeros(len(groups),) # initialize Shapley values for all groups to zero
   vs = np.zeros(len(groups)+1,) # values for group combinations for all groups to zero
   idcs = np.random.permutation(len(groups))
   for j in range(maxGroups):
     datapoints = flatten([groups[idx] for idx in idcs[:j]])
     vs[j+1] = eval(datapoints, X, Y, Xt, Yt)
-    phis[idcs[j]] += (vs[j+1]-vs[j]) # add new marginal for group idcs[j]
+    phis[idcs[j]] += vs[j+1]-vs[j] # add new marginal for group idcs[j]
   return phis
 
-def dshapley(groups, X, Y, Xt, Yt, T=500):
-  pool = Pool(processes=10)
+def dshapley(groups, X, Y, Xt, Yt, T=1000):
+  pool = Pool(processes=100)
   res = pool.map(update_per_t, range(T))
   phis = np.mean(res, axis=0)
   return phis
@@ -225,6 +225,12 @@ if nm=='BCORES':
     for m in range(M+1):
       accs[m]= compute_accuracy(Xt, Yt, thetas)
   else:
+    # sample from prior for coreset size 0
+    sampler_data = {'x': np.zeros((1,D-1)), 'y': [0], 'd': D, 'N': 1, 'w': [0]}
+    thd = sampler_data['d']+1
+    fit = sml.sampling(data=sampler_data, iter=N_per*2, chains=1, control={'adapt_delta':0.9, 'max_treedepth':15}, verbose=False)
+    thetas = np.roll(fit.extract(permuted=False)[:, 0, :thd], -1)
+    accs[0]= compute_accuracy(Xt, Yt, thetas)
     for m in range(1,M+1):
       print('selected cx with shape : ', p[m][:, :-1].shape, ' and weights', w[m])
       # subsample for MCMC
@@ -239,22 +245,23 @@ if nm=='BCORES':
 
 elif nm=='DShapley':
   phis = dshapley(groups, X, Y, Xt, Yt)
-  sort_index = np.argsort(phis)[::-1]
-  selected_groups = sort_index # sort groups according to DShapley values and pick greedily
+  selected_groups = np.argsort(phis)[::-1] # sort groups according to Shapley value and select greedily
   accs = np.zeros(M+1)
   print('Evaluation')
-  for m in range(1,M+1):
-    accs[m] = eval(selected_groups[:m], X, Y, Xt, Yt, N_per=1000)
+  for m in range(M+1):
+    datapoints = flatten([groups[idx] for idx in selected_groups[:m]])
+    accs[m] = eval(datapoints, X, Y, Xt, Yt, N_per=1000)
     dem+=[[demos[selgroup] for selgroup in selected_groups[:m]]]
-    indices.append(np.array(flatten([groups[idx] for idx in selected_groups[:m]])))
+    indices.append(np.array(datapoints))
   print('accuracies : ', accs)
 
 elif nm=='RAND':
   selected_groups = np.random.permutation(len(groups)) # randomize order of groups
-  for m in range(1,M+1):
-    accs[m] = eval(selected_groups[:m], X, Y, Xt, Yt, N_per=1000)
+  for m in range(M+1):
+    datapoints = flatten([groups[idx] for idx in selected_groups[:m]])
+    accs[m] = eval(datapoints, X, Y, Xt, Yt, N_per=1000)
     dem+=[[demos[selgroup] for selgroup in selected_groups[:m]]]
-    indices.append(np.array(flatten([groups[idx] for idx in selected_groups[:m]])))
+    indices.append(np.array(datapoints))
   print('accuracies : ', accs)
 
 #save results

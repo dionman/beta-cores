@@ -19,14 +19,14 @@ rnd = np.random.rand()
 def linearize():
   args_dict = dict()
   c = -1
-  for beta in [0.9]:
-    for tr in range(10): # trial number
-      for nm in ["SVI", "BCORES", "BPSVI"]: #, "RAND"]: # coreset method
-        for i0 in [1.0]:
-          for f_rate in [15]: #30
-            for graddiag in [True]:
+  for beta in [0.7]:
+    for tr in range(5): # trial number
+      for nm in ['BPSVI']: #["BCORES", "SVI", "BPSVI", "RAND"]: # coreset method
+        for i0 in [0.1, 10.]:
+          for f_rate in [0]: #30
+            for graddiag in [False]:
               for structured in [False]:
-               for dnm in ["webspam"]: #, "webspam"]:
+               for dnm in ["adult"]: #, "webspam"]:
                   c += 1
                   args_dict[c] = (tr, nm, dnm, f_rate, beta, i0, graddiag, structured)
   return args_dict
@@ -115,7 +115,7 @@ sz = 1000
 print('Loading dataset '+dnm)
 X, Y, Xt, Yt = load_data('../data/'+dnm+'.npz') # read train and test data
 X, Y, Z, x_mean, x_std = std_cov(X, Y) # standardize covariates for training data
-if f_rate>0: X, Y, Z = perturb(X, Y, f_rate=0.01*f_rate, structured=structured) # corrupt datapoints
+if f_rate>0: X, Y, Z, _ = perturb(X, Y, f_rate=0.01*f_rate, structured=structured) # corrupt datapoints
 N, D = X.shape
 print('N, D : ', N, D)
 # make sure test set is adequate for evaluation via the predictive accuracy metric
