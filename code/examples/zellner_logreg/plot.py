@@ -56,10 +56,10 @@ else:
 M=101
 
 for alg in algs:
-  #if alg[0]=='BCORES':
-  #    trials = [fn for fn in os.listdir(fldr_res) if fn.startswith(dnm+'_'+alg[0]+'_frate_'+str(f_rate)+'_i0_'+str(i0)+'_beta_0.9_graddiag_'+str(graddiag)+'_'+str(structured))]
-  #else:
-  trials = [fn for fn in os.listdir(fldr_res) if fn.startswith(dnm+'_'+alg[0]+'_frate_'+str(f_rate)+'_i0_'+str(i0)+'_beta_'+str(beta)+'_graddiag_'+str(graddiag)+'_'+str(structured))]
+  if alg[0]=='BPSVI':
+      trials = [fn for fn in os.listdir(fldr_res) if fn.startswith(dnm+'_'+alg[0]+'_frate_'+str(f_rate)+'_i0_1.0_beta_0.7_graddiag_'+str(graddiag)+'_'+str(structured))]
+  else:
+      trials = [fn for fn in os.listdir(fldr_res) if fn.startswith(dnm+'_'+alg[0]+'_frate_'+str(f_rate)+'_i0_'+str(i0)+'_beta_'+str(beta)+'_graddiag_'+str(graddiag)+'_'+str(structured))]
   print(trials)
   if len(trials) == 0:
     fig.line([], [], color=alg[2], legend_label=alg[1], line_width=10); fig.patch([], [], color=alg[2], legend_label=alg[1], alpha=0.3)
@@ -163,14 +163,14 @@ for f in [fig, fig3]:
   f.legend.glyph_width=50
   f.legend.glyph_height=50
   f.legend.spacing=10
-  f.legend.visible = (alg[0]=='adult')
+  f.legend.visible = (dnm=='adult')
 for f in [fig2, fig4]:
   f.legend.location='bottom_right'
   f.legend.label_text_font_size= '80pt'
   f.legend.glyph_width=50
   f.legend.glyph_height=50
   f.legend.spacing=10
-  f.legend.visible = (alg[0]=='adult')
+  f.legend.visible = (dnm=='adult')
 
 fig2.add_layout(Title(text="F="+str(f_rate)+"%," + "  β="+str(beta), text_font_style="italic", text_font_size = "70px"), 'above')
 fig2.add_layout(Title(text=dnmnm, align="center", text_font='helvetica', text_font_style='bold', text_font_size = "80px"), "above")

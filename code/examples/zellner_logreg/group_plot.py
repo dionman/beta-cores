@@ -20,11 +20,11 @@ beta=0.9
 i0=1.0
 f_rate=0
 graddiag=str(False)
-M=11
+M=10
 
 plot_0=False # plot baseline for zero corruption
 
-algs = [('BCORES', 'β-Cores', pal[0]), ('DShapley', 'Data Shapley', pal[1]), ('RAND', 'Random', pal[3])] #
+algs = [('RAND', 'Random', pal[3])] #[('BCORES', 'β-Cores', pal[0]), ('DShapley', 'Data Shapley', pal[1])#, ('RAND', 'Random', pal[3])] #
 fldr_figs = 'figs'
 if not os.path.exists(fldr_figs):
   os.mkdir(fldr_figs)
@@ -51,18 +51,20 @@ for alg in algs:
     fig.line([], [], color=alg[2], legend_label=alg[1], line_width=10); fig.patch([], [], color=alg[2], legend_label=alg[1], alpha=0.3)
     fig2.line([], [], color=alg[2], legend_label=alg[1], line_width=10); fig2.patch([], [], color=alg[2], legend_label=alg[1], alpha=0.3)
     continue
-  accs = np.zeros((len(trials), M))
-  #dem = np.zeros((len(trials), M))
-  cszs = np.zeros((len(trials), M))
+  accs = np.zeros((len(trials), M+1))
+  #dem = np.zeros((len(trials), M+1))
+  cszs = np.zeros((len(trials), M+1))
   for tridx, fn in enumerate(trials):
     f = open(os.path.join(fldr_res,fn), 'rb')
     res = pk.load(f) #(w, p, accs, pll)
     f.close()
     accs[tridx] = res[0]
+    print('res shapes : ', len(res[0]), len(res[1]), len(res[2]))
+
 
     #dem[tridx] = res[2]
-    print('\n\n', res[2][-1], '\n\n\n')
-    cszs[tridx, :] = np.array([len(d) for d in res[1]])
+    print('\n\n', res[2][-1], '\n\n\n', [len(d) for d in res[1][1:]])
+    cszs[tridx, :] = np.array([len(d) for d in res[1][1:]])
 
   csz50 = np.percentile(cszs, 50, axis=0)
   csz25 = np.percentile(cszs, 25, axis=0)
@@ -132,10 +134,10 @@ for f in [fig2]:
   f.legend.spacing=10
   f.legend.visible = True
 
-fig2.add_layout(Title(text="F="+str(f_rate)+"%," + "  β="+str(beta), text_font_style="italic", text_font_size = "70px"), 'above')
+fig2.add_layout(Title(text="F="+str(int(100*f_rate))+"%," + "  β="+str(beta), text_font_style="italic", text_font_size = "70px"), 'above')
 fig2.add_layout(Title(text=dnmnm, align="center", text_font='helvetica', text_font_style='bold', text_font_size = "80px"), "above")
 
-fig.add_layout(Title(text="F="+str(f_rate)+"%," + "  β="+str(beta), text_font_style="italic", text_font_size = "70px"), 'above')
+fig.add_layout(Title(text="F="+str(int(100*f_rate))+"%," + "  β="+str(beta), text_font_style="italic", text_font_size = "70px"), 'above')
 fig.add_layout(Title(text=dnmnm, align="center", text_font='helvetica', text_font_style='bold', text_font_size = "80px"), "above")
 
 
