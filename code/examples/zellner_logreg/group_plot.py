@@ -18,7 +18,7 @@ fldr_figs='figs'
 fldr_res='group_results'
 beta=0.9
 i0=1.0
-f_rate=0.1
+f_rate=0
 graddiag=str(False)
 M=10
 
@@ -30,6 +30,8 @@ if not os.path.exists(fldr_figs):
   os.mkdir(fldr_figs)
 
 figs=[]
+groups=[]
+groupsll=[]
 print('Plotting ' + dnm)
 if dnm=='diabetes':
   fig = bkp.figure(y_axis_label='Predictive Accuracy',  x_axis_label='Number of Included Groups', plot_height=1500, plot_width=2000, toolbar_location=None)
@@ -45,8 +47,8 @@ else:
   figs.append([fig, fig2])
 
 for alg in algs:
+  print('\n\n\n\n alg : ', alg)
   trials = [fn for fn in os.listdir(fldr_res) if fn.startswith(dnm+'_'+alg[0]+'_'+str(f_rate)+'_')]
-  print(trials)
   if len(trials) == 0:
     fig.line([], [], color=alg[2], legend_label=alg[1], line_width=10); fig.patch([], [], color=alg[2], legend_label=alg[1], alpha=0.3)
     fig2.line([], [], color=alg[2], legend_label=alg[1], line_width=10); fig2.patch([], [], color=alg[2], legend_label=alg[1], alpha=0.3)
@@ -60,16 +62,16 @@ for alg in algs:
     res = pk.load(f) #(w, p, accs, pll)
     f.close()
     accs[tridx] = res[0]
-    print(res[1])
-
+    print(res[2][-1],'\n')
+    if alg[0] == 'BCORES':
+      groups+=res[2][-1]
+      groupsll+=[res[2][-1]]
 
     #dem[tridx] = res[2]
     if alg[0]=='BCORES':
-      print('\n\n', res[2][-1], '\n\n\n', [len(d) for d in res[1]])
       cszs[tridx, :] = np.array([len(d) for d in res[1]])
       numgroups[tridx,:] = [len(set(r)) for r in res[2]]
     else:
-      print('\n\n', res[2][-1], '\n\n\n', [len(d) for d in res[1][1:]])
       cszs[tridx, :] = np.array([len(d) for d in res[1][1:]])
       numgroups[tridx,:] = [len(set(r)) for r in res[2][1:]]
 
@@ -113,6 +115,8 @@ for alg in algs:
       print('\n\n', res[2][-1], '\n\n\n')
       cszs[tridx, :] = np.array([len(d) for d in res[1]])
 
+
+
     csz50 = np.percentile(cszs, 50, axis=0)
     csz25 = np.percentile(cszs, 25, axis=0)
     csz75 = np.percentile(cszs, 75, axis=0)
@@ -136,14 +140,14 @@ for alg in algs:
 
 
 for f in [fig]:
-  f.legend.location='bottom_right'
+  f.legend.location='center_right'
   f.legend.label_text_font_size= '80pt'
   f.legend.glyph_width=50
   f.legend.glyph_height=50
   f.legend.spacing=10
   f.legend.visible = True
 for f in [fig2]:
-  f.legend.location='bottom_right'
+  f.legend.location='center_right'
   f.legend.label_text_font_size= '80pt'
   f.legend.glyph_width=50
   f.legend.glyph_height=50
@@ -163,3 +167,46 @@ export_png(fig2, filename=os.path.join(fldr_figs, 'group_'+dnm+fnm+"_ACCvssz.png
 
 np.savez('results/group_diagnostics_'+dnm+'_'+fnm, accs=accs)
 #bkp.show(bkl.gridplot(figs))
+
+
+
+
+import matplotlib.pyplot as plt
+import collections
+flatten = lambda l: [item for sublist in l for item in sublist]
+
+groupset = collections.Counter(groups)
+print('\n\n\n', groups)
+print('\n\n\n', groupset.keys(), len(groupset.keys()))
+print('\n\n\n', groupset)
+print(numgroups)
+numgroups = min(len(groupset.keys()), 10)
+
+fig, ax = plt.subplots(figsize=(16,10))
+ax.tick_params(axis='both', which='major', labelsize=20)
+ax.tick_params(axis='both', which='minor', labelsize=20)
+
+image = np.zeros(shape=(numgroups, 5))
+comgr = [g[0] for g in groupset.most_common()[:numgroups]]
+ax.yaxis.set_ticks(list(range(numgroups))) #set the ticks to be a
+ax.set_yticklabels(comgr)
+ax.xaxis.set_ticks(list(range(5))) #set the ticks to be a
+ax.set_xticklabels(['1','2','3','4','5']) #set the ticks to be a
+
+for i, g in enumerate(comgr):
+  image[i,:] = [0.15*(e+1)*(g in gr) for e, gr in enumerate(groupsll)]
+image[image == 0] = 'nan'
+print(image)
+
+
+ax.imshow(image, cmap=plt.cm.jet, interpolation='nearest', alpha=0.6)
+for edge, spine in ax.spines.items():
+  spine.set_visible(False)
+
+ax.set_xticks(np.arange(image.shape[1]+1)-.5, minor=True)
+ax.set_yticks(np.arange(image.shape[0]+1)-.5, minor=True)
+ax.grid(which="minor", color="w", linestyle='-', linewidth=3)
+ax.tick_params(which="minor", bottom=False, left=False)
+fig.tight_layout()
+
+fig.savefig(os.path.join(fldr_figs, 'selected_groups.png'), format='png')
