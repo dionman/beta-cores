@@ -21,7 +21,7 @@ def linearize():
   c = -1
   for beta in [0.9]:
     for tr in range(5): # trial number
-      for nm in ["BCORES", "SVI", "RAND"]: # coreset method
+      for nm in ["BCORES", "SVI"]: # coreset method
         for i0 in [1]:
           for f_rate in [0]: #30
             for graddiag in [True]:

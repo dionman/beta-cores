@@ -11,6 +11,7 @@ from scipy.optimize import minimize, nnls
 import scipy.linalg as sl
 from model_lr import *
 import pystan
+import random 
 
 # specify random number only for test size randomization (common across trials)
 np.random.seed(42)
@@ -138,25 +139,27 @@ Xt, Yt, _, _, _ = std_cov(Xt, Yt, mean_=x_mean, std_=x_std) # standardize covari
 
 ####################################################################
 # functions used in DShapley and RAND
-def update_per_t(t, maxGroups=15):
-  phis = np.zeros(len(groups),) # initialize Shapley values for all groups to zero
-  occs = np.zeros(len(groups),)
+def update_per_t(t, maxGroups=20, groupcap=50):
+  phis, occs = np.zeros(len(groups),), np.zeros(len(groups),) # initialize Shapley values for all groups to zero
   vs = np.zeros(len(groups)+1,) # values for group combinations for all groups to zero
   idcs = np.random.permutation(len(groups))
   for j in range(maxGroups):
-    datapoints = flatten([groups[idx] for idx in idcs[:j]])
+    datapoints = flatten([groups[idx] if len(groups[idx])<groupcap else random.sample(groups[idx], groupcap) for idx in idcs[:j]]) # cap maximum group size
     vs[j+1] = eval(datapoints, X, Y, Xt, Yt)
-    phis[idcs[j]] = vs[j+1]-vs[j] # add new marginal for group idcs[j]
+    phis[idcs[j]] += vs[j+1]-vs[j] # add new marginal for group idcs[j]
     occs[idcs[j]]+=1 
-  return phis, occs
+  return phis, occs 
 
-def dshapley(groups, X, Y, Xt, Yt, T=2000):
+def dshapley(groups, X, Y, Xt, Yt, T=3000):
   pool = Pool(processes=100)
-  res, occs = pool.map(update_per_t, range(T))
+  #res  = pool.map(update_per_t, range(T))
+  res, occs =  zip(*pool.map(update_per_t, range(T)))
   res = np.sum(res, axis=0)
-  print('res : ', res)
   occs = np.sum(occs, axis=0)
   phis = np.divide(res, occs, out=np.zeros_like(res), where=occs!=0)
+  print('\n\nres : ', res)
+  print('occs : ', occs)
+  print('phis : ', phis)
   return phis
 
 def eval(idcs, X, Y, Xt, Yt, N_per=1000):
@@ -242,7 +245,6 @@ if nm=='BCORES':
       fit = sml.sampling(data=sampler_data, iter=N_per*2, chains=1, control={'adapt_delta':0.9, 'max_treedepth':15}, verbose=False)
       thetas = np.roll(fit.extract(permuted=False)[:, 0, :thd], -1)
       accs[m]= compute_accuracy(Xt, Yt, thetas)
-  print('accuracies : ', accs)
 
 elif nm=='DShapley':
   phis = dshapley(groups, X, Y, Xt, Yt)
@@ -254,7 +256,6 @@ elif nm=='DShapley':
     accs[m] = eval(datapoints, X, Y, Xt, Yt, N_per=1000)
     dem+=[[demos[selgroup] for selgroup in selected_groups[:m]]]
     indices.append(np.array(datapoints))
-  print('accuracies : ', accs)
 
 elif nm=='RAND':
   selected_groups = np.random.permutation(len(groups)) # randomize order of groups
@@ -263,7 +264,7 @@ elif nm=='RAND':
     accs[m] = eval(datapoints, X, Y, Xt, Yt, N_per=1000)
     dem+=[[demos[selgroup] for selgroup in selected_groups[:m]]]
     indices.append(np.array(datapoints))
-  print('accuracies : ', accs)
+print('accuracies : ', accs)
 
 #save results
 f = open('/home/dm754/rds/hpc-work/zellner_logreg/group_results/'+dnm+'_'+nm+'_'+str(f_rate)+'_results_'+str(ID)+'.pk', 'wb')
