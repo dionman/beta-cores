@@ -16,6 +16,7 @@ import random
 # specify random number only for test size randomization (common across trials)
 np.random.seed(42)
 rnd = np.random.rand()
+
 flatten = lambda l: [item for sublist in l for item in sublist]
 
 def linearize():
@@ -142,18 +143,22 @@ Xt, Yt, _, _, _ = std_cov(Xt, Yt, mean_=x_mean, std_=x_std) # standardize covari
 def update_per_t(t, maxGroups=20, groupcap=50):
   phis, occs = np.zeros(len(groups),), np.zeros(len(groups),) # initialize Shapley values for all groups to zero
   vs = np.zeros(len(groups)+1,) # values for group combinations for all groups to zero
+  vs[0] = 0.5 # accuracy in the absence of observation (according to our prior) is 0.5
   idcs = np.random.permutation(len(groups))
   for j in range(maxGroups):
-    datapoints = flatten([groups[idx] if len(groups[idx])<groupcap else random.sample(groups[idx], groupcap) for idx in idcs[:j]]) # cap maximum group size
+    datapoints = flatten([groups[idx] if len(groups[idx])<groupcap else random.sample(groups[idx], groupcap) for idx in idcs[:(j+1)]]) # cap maximum group size
     vs[j+1] = eval(datapoints, X, Y, Xt, Yt)
     phis[idcs[j]] += vs[j+1]-vs[j] # add new marginal for group idcs[j]
-    occs[idcs[j]]+=1 
+    occs[idcs[j]] += 1 
+  print('vs and occs : ', vs, occs)
   return phis, occs 
 
-def dshapley(groups, X, Y, Xt, Yt, T=3000):
+def dshapley(groups, X, Y, Xt, Yt, T=5000):
   pool = Pool(processes=100)
   #res  = pool.map(update_per_t, range(T))
   res, occs =  zip(*pool.map(update_per_t, range(T)))
+  print('\n\nres BEFORE SUMMATION : ', res)
+  print('occs  BEFORE SUMMATION : ', occs)
   res = np.sum(res, axis=0)
   occs = np.sum(occs, axis=0)
   phis = np.divide(res, occs, out=np.zeros_like(res), where=occs!=0)
@@ -249,11 +254,14 @@ if nm=='BCORES':
 elif nm=='DShapley':
   phis = dshapley(groups, X, Y, Xt, Yt)
   selected_groups = np.argsort(phis)[::-1] # sort groups according to Shapley value and select greedily
+  print('selected groups : ', np.sort(phis))
+  print('selected groups : ', selected_groups)
   accs = np.zeros(M+1)
   print('Evaluation')
   for m in range(M+1):
     datapoints = flatten([groups[idx] for idx in selected_groups[:m]])
     accs[m] = eval(datapoints, X, Y, Xt, Yt, N_per=1000)
+    print('shape of dataset used finally : ', X[datapoints][:, :-1].shape)
     dem+=[[demos[selgroup] for selgroup in selected_groups[:m]]]
     indices.append(np.array(datapoints))
 
