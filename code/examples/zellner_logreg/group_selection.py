@@ -22,10 +22,10 @@ flatten = lambda l: [item for sublist in l for item in sublist]
 def linearize():
   args_dict = dict()
   c=-1
-  for beta in [0.9]:
+  for beta in [0, 0.01, 0.2, 0.7]:
     for ID in range(5):
       for f_rate in [0, 0.1]:
-        for nm in ['DShapley']: #['RAND', 'DShapley', 'BCORES']:
+        for nm in ['BCORES']: #['RAND', 'DShapley', 'BCORES']:
           c+=1
           args_dict[c] = (ID, nm, f_rate, beta)
   return args_dict
@@ -150,21 +150,15 @@ def update_per_t(t, maxGroups=20, groupcap=50):
     vs[j+1] = eval(datapoints, X, Y, Xt, Yt)
     phis[idcs[j]] += vs[j+1]-vs[j] # add new marginal for group idcs[j]
     occs[idcs[j]] += 1 
-  print('vs and occs : ', vs, occs)
   return phis, occs 
 
 def dshapley(groups, X, Y, Xt, Yt, T=5000):
   pool = Pool(processes=100)
   #res  = pool.map(update_per_t, range(T))
   res, occs =  zip(*pool.map(update_per_t, range(T)))
-  print('\n\nres BEFORE SUMMATION : ', res)
-  print('occs  BEFORE SUMMATION : ', occs)
   res = np.sum(res, axis=0)
   occs = np.sum(occs, axis=0)
   phis = np.divide(res, occs, out=np.zeros_like(res), where=occs!=0)
-  print('\n\nres : ', res)
-  print('occs : ', occs)
-  print('phis : ', phis)
   return phis
 
 def eval(idcs, X, Y, Xt, Yt, N_per=1000):
@@ -241,7 +235,6 @@ if nm=='BCORES':
     # sample from prior for coreset size 0
     accs[0] = eval([], X, Y, Xt, Yt, N_per=1000)
     for m in range(1,M+1):
-      print('selected cx with shape : ', p[m][:, :-1].shape, ' and weights', w[m])
       # subsample for MCMC
       cx, cy = p[m][:, :-1], ls[m].astype(int)
       cy[cy==-1] = 0
@@ -254,14 +247,11 @@ if nm=='BCORES':
 elif nm=='DShapley':
   phis = dshapley(groups, X, Y, Xt, Yt)
   selected_groups = np.argsort(phis)[::-1] # sort groups according to Shapley value and select greedily
-  print('selected groups : ', np.sort(phis))
-  print('selected groups : ', selected_groups)
   accs = np.zeros(M+1)
   print('Evaluation')
   for m in range(M+1):
     datapoints = flatten([groups[idx] for idx in selected_groups[:m]])
     accs[m] = eval(datapoints, X, Y, Xt, Yt, N_per=1000)
-    print('shape of dataset used finally : ', X[datapoints][:, :-1].shape)
     dem+=[[demos[selgroup] for selgroup in selected_groups[:m]]]
     indices.append(np.array(datapoints))
 
@@ -275,7 +265,7 @@ elif nm=='RAND':
 print('accuracies : ', accs)
 
 #save results
-f = open('/home/dm754/rds/hpc-work/zellner_logreg/group_results/'+dnm+'_'+nm+'_'+str(f_rate)+'_results_'+str(ID)+'.pk', 'wb')
+f = open('/home/dm754/rds/hpc-work/zellner_logreg/group_results/'+dnm+'_'+nm+'_'+str(f_rate)+'_'+str(beta)+'_results_'+str(ID)+'.pk', 'wb')
 res = (accs, indices, dem)
 pk.dump(res, f)
 f.close()
