@@ -22,7 +22,7 @@ flatten = lambda l: [item for sublist in l for item in sublist]
 def linearize():
   args_dict = dict()
   c=-1
-  for beta in [0, 0.01, 0.2, 0.7]:
+  for beta in [0.3]: #[0.4, 0.5, 0.6, 0.8, 0.9]:
     for ID in range(5):
       for f_rate in [0, 0.1]:
         for nm in ['BCORES']: #['RAND', 'DShapley', 'BCORES']:
