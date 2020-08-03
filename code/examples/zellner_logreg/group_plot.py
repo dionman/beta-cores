@@ -140,14 +140,14 @@ for alg in algs:
 
 
 for f in [fig]:
-  f.legend.location='center_right'
+  f.legend.location='top_left'
   f.legend.label_text_font_size= '80pt'
   f.legend.glyph_width=50
   f.legend.glyph_height=50
   f.legend.spacing=10
   f.legend.visible = True
 for f in [fig2]:
-  f.legend.location='center_right'
+  f.legend.location='top_left'
   f.legend.label_text_font_size= '80pt'
   f.legend.glyph_width=50
   f.legend.glyph_height=50
@@ -173,6 +173,8 @@ np.savez('results/group_diagnostics_'+dnm+'_'+fnm, accs=accs)
 
 import matplotlib.pyplot as plt
 import collections
+plt.rc('font', family='Helvetica')
+
 flatten = lambda l: [item for sublist in l for item in sublist]
 
 groupset = collections.Counter(groups)
@@ -183,13 +185,19 @@ print(numgroups)
 numgroups = min(len(groupset.keys()), 10)
 
 fig, ax = plt.subplots(figsize=(16,10))
-ax.tick_params(axis='both', which='major', labelsize=20)
-ax.tick_params(axis='both', which='minor', labelsize=20)
+ax.tick_params(axis='both', which='major', labelsize=25)
+ax.tick_params(axis='both', which='minor', labelsize=25)
 
 image = np.zeros(shape=(numgroups, 5))
 comgr = [g[0] for g in groupset.most_common()[:numgroups]]
 ax.yaxis.set_ticks(list(range(numgroups))) #set the ticks to be a
-ax.set_yticklabels(comgr)
+ylabs = [str(int(g[0]*10))+'%, '+str(g[1:]) for g in comgr]
+ylabs = [str(g)[:-1].replace("'", "").replace("(", "") for g in ylabs]
+
+ax.set_ylabel('%Outliers, Age, Race, Gender', rotation='horizontal', fontsize=35, style='italic')
+ax.yaxis.set_label_coords(-0.78,1.02)
+ax.set_yticklabels(ylabs)
+ax.set_xlabel('Trial', fontsize=35, style='italic')
 ax.xaxis.set_ticks(list(range(5))) #set the ticks to be a
 ax.set_xticklabels(['1','2','3','4','5']) #set the ticks to be a
 
@@ -209,4 +217,4 @@ ax.grid(which="minor", color="w", linestyle='-', linewidth=3)
 ax.tick_params(which="minor", bottom=False, left=False)
 fig.tight_layout()
 
-fig.savefig(os.path.join(fldr_figs, 'selected_groups.png'), format='png')
+fig.savefig(os.path.join(fldr_figs, 'selected_groups.png'), format='png', dpi=300)
