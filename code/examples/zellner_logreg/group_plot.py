@@ -16,15 +16,15 @@ if dnm=='diabetes':
   dnmnm='HOSPITAL READMISSIONS'
 fldr_figs='figs'
 fldr_res='group_results'
-beta=0.9
+beta=0.6
 i0=1.0
-f_rate=0
+f_rate=0.1
 graddiag=str(False)
 M=10
 
 plot_0=False # plot baseline for zero corruption
 
-algs = [('RAND', 'Random', pal[3]), ('BCORES', 'β-Cores', pal[0]), ('DShapley', 'Data Shapley', pal[1])] #, ('RAND', 'Random', pal[3])] #
+algs = [('BCORES', 'β-Cores', pal[0]), ('DShapley', 'Data Shapley', pal[1]), ('RAND', 'Random', pal[3])] #, ('RAND', 'Random', pal[3])] #
 fldr_figs = 'figs'
 if not os.path.exists(fldr_figs):
   os.mkdir(fldr_figs)
@@ -48,7 +48,10 @@ else:
 
 for alg in algs:
   print('\n\n\n\n alg : ', alg)
-  trials = [fn for fn in os.listdir(fldr_res) if fn.startswith(dnm+'_'+alg[0]+'_'+str(f_rate)+'_')]
+  if alg[0]=='BCORES':
+      trials = [fn for fn in os.listdir(fldr_res) if fn.startswith(dnm+'_'+alg[0]+'_'+str(f_rate)+'_'+str(beta))]
+  else:
+      trials = [fn for fn in os.listdir(fldr_res) if fn.startswith(dnm+'_'+alg[0]+'_'+str(f_rate)+'_')]
   if len(trials) == 0:
     fig.line([], [], color=alg[2], legend_label=alg[1], line_width=10); fig.patch([], [], color=alg[2], legend_label=alg[1], alpha=0.3)
     fig2.line([], [], color=alg[2], legend_label=alg[1], line_width=10); fig2.patch([], [], color=alg[2], legend_label=alg[1], alpha=0.3)
@@ -140,19 +143,19 @@ for alg in algs:
 
 
 for f in [fig]:
-  f.legend.location='top_left'
+  f.legend.location='top_right'
   f.legend.label_text_font_size= '80pt'
   f.legend.glyph_width=50
   f.legend.glyph_height=50
   f.legend.spacing=10
-  f.legend.visible = True
+  f.legend.visible = False
 for f in [fig2]:
-  f.legend.location='top_left'
+  f.legend.location='top_right'
   f.legend.label_text_font_size= '80pt'
   f.legend.glyph_width=50
   f.legend.glyph_height=50
   f.legend.spacing=10
-  f.legend.visible = True
+  f.legend.visible = False
 
 fig2.add_layout(Title(text="F="+str(int(100*f_rate))+"%," + "  β="+str(beta), text_font_style="italic", text_font_size = "70px"), 'above')
 fig2.add_layout(Title(text=dnmnm, align="center", text_font='helvetica', text_font_style='bold', text_font_size = "80px"), "above")
