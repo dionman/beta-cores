@@ -103,6 +103,7 @@ class NeuralLinear(torch.nn.Module):
         {'params': other},
       ], lr=initial_lr)
     batch_size = self.get_batch_size(pts.shape[0])
+    print('points shape : ', pts.shape)
     print('batch size = ', batch_size)
     dataloader = DataLoader(
             dataset=data.TensorDataset(wts, pts),

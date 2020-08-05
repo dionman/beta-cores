@@ -8,10 +8,18 @@ sys.path.insert(1, os.path.join(sys.path[0], '../common'))
 from model_neurlinr import *
 from neural import *
 
+# randomize datapoints order
+def unison_shuffled_copies(a, b):
+  assert a.shape[0] == b.shape[0]
+  p = np.random.permutation(a.shape[0])
+  return a[p], b[p]
+
 # Parse input arguments
 dnm = sys.argv[1]
 algnm = sys.argv[2]
 tr = sys.argv[3]
+f_rate = float(sys.argv[4])
+beta = float(sys.argv[5])
 np.random.seed(int(tr))
 #Specify results folder
 results_fldr = 'results'
@@ -31,16 +39,17 @@ else:
   test_size = int(0.2*N)
 
 # Split datasets
-# randomize datapoints order
-def unison_shuffled_copies(a, b):
-    assert a.shape[0] == b.shape[0]
-    p = np.random.permutation(a.shape[0])
-    return a[p], b[p]
 X, Y = unison_shuffled_copies(X.astype(np.float32), Y.astype(np.float32))
 X_init, Y_init, X, Y, X_test, Y_test = X[:init_size,:], Y[:init_size], X[init_size:-test_size,:], Y[init_size:-test_size], X[-test_size:,:], Y[-test_size:]
+X, Y, Z, x_mean, x_std = std_cov(X, Y) # standardize covariates
+X, Y = perturb(X, Y, f_rate=f_rate)# corrupt datapoints
+
 Z_init = np.hstack((X_init, Y_init)).astype(np.float32)
 Z = np.hstack((X, Y)).astype(np.float32)
 Z_test = np.hstack((X_test, Y_test)).astype(np.float32)
+batch_size=10
+groups = [list(np.random.choice(X.shape[0], batch_size)) for _ in range(200)]
+
 
 # Specify encoder and coreset hyperparameters
 out_features = 30 # dimension of the ouput of the neural encoder used for lin reg
@@ -52,8 +61,8 @@ n_subsample_select = 1000
 proj_dim = 100
 i0 = 0.1 # starting learning rate
 SVI_step_sched = lambda i : i0/(1.+i)
-BPSVI_step_sched = lambda m: lambda i : i0/(1.+i)
-#BCORES_step_sched = lambda i : i0/(1.+i)
+#BPSVI_step_sched = lambda m: lambda i : i0/(1.+i)
+BCORES_step_sched = lambda i : i0/(1.+i)
 
 #Specify priors
 #get empirical mean/std
@@ -71,6 +80,8 @@ deep_encoder = lambda nl, z: (np.hstack((nl.encode(torch.from_numpy(z[:, :-1].as
                                             z[:,-1][:,np.newaxis].astype(np.float32))))
 log_likelihood = lambda z, th, nl: neurlinr_loglikelihood(deep_encoder(nl, z), th, datastd**2)
 grad_log_likelihood = lambda z, th, nl:  NotImplementedError
+beta_likelihood = lambda z, th, beta, nl: neurlinr_beta_likelihood(deep_encoder(nl, z), th, beta, datastd**2)
+grad_beta = lambda z, th, beta, nl : neurlinr_beta_gradient(z, th, beta, Siginv, logdetSig)
 #neurlinr_grad_x_loglikelihood(deep_encoder(nl, z), th, datastd**2)
 
 '''
@@ -89,17 +100,25 @@ def sampler_w(n, wts, pts):
   return muw + np.random.randn(n, muw.shape[0]).dot(LSigw.T)
 
 prj_w = bc.BlackBoxProjector(sampler_w, proj_dim, log_likelihood, grad_log_likelihood, nl=nl)
-#prj_bw = bc.BetaBlackBoxProjector(sampler_w, proj_dim, beta_likelihood, log_likelihood, grad_beta)
+prj_bw = bc.BetaBlackBoxProjector(sampler_w, proj_dim, beta_likelihood, log_likelihood, grad_beta, nl=nl)
 
 #create coreset construction objects
 print('Creating coreset construction objects')
-sparsevi = bc.SparseVICoreset(Z, prj_w, opt_itrs=VI_opt_itrs, n_subsample_opt=n_subsample_opt, n_subsample_select=n_subsample_select,
-                              step_sched=SVI_step_sched, wts=np.ones(init_size), idcs=np.arange(init_size), pts=Z_init)
+
+in_batches=True
+if in_batches:
+  sparsevi = bc.SparseVICoreset(Z, prj_w, opt_itrs=VI_opt_itrs, n_subsample_opt=n_subsample_opt, n_subsample_select=None,
+                              step_sched=SVI_step_sched, wts=np.ones(init_size), idcs=np.arange(init_size), pts=Z_init, groups=groups)
+  bcoresvi = bc.BetaCoreset(Z, prj_bw, opt_itrs = VI_opt_itrs, n_subsample_opt = n_subsample_opt, n_subsample_select = None,
+                              step_sched = BCORES_step_sched, beta = beta, learn_beta=False, wts=np.ones(init_size), idcs=np.arange(init_size), pts=Z_init, groups=groups)
+else:
+  sparsevi = bc.SparseVICoreset(Z, prj_w, opt_itrs=VI_opt_itrs, n_subsample_opt=n_subsample_opt, n_subsample_select=n_subsample_select,
+                              step_sched=SVI_step_sched, wts=np.ones(init_size), idcs=np.arange(init_size), pts=Z_init, groups=None)
 #bpsvi = bc.BatchPSVICoreset(Z, prj_w, opt_itrs=VI_opt_itrs, n_subsample_opt=n_subsample_opt,
 #                              step_sched=BPSVI_step_sched, wts=np.ones(init_size), idcs=np.arange(init_size), pts=Z_init)
 unif = bc.UniformSamplingCoreset(Z, wts=np.ones(init_size), idcs=np.arange(init_size), pts=Z_init)
 
-algs = {#'BCORES': bcoresvi,
+algs = {'BCORES': bcoresvi,
         #'BPSVI': bpsvi,
         'SVI': sparsevi,
         'RAND': unif,
@@ -142,10 +161,11 @@ else:
     print(m)
     if algnm!='PRIOR':
       print('trial: ' + str(tr) +' alg: ' + algnm + ' ' + str(m) +'/'+str(M))
-      alg.build(1, init_size+m)
+      alg.build(1, N)
       #store weights
       if algnm=='BCORES':
         wts, pts, idcs, beta = alg.get()
+        print('bcores returned : ', wts, pts, idcs, beta)
       else:
         wts, pts, idcs = alg.get()
       w.append(wts)
@@ -164,7 +184,7 @@ else:
                       torch.from_numpy(np.asarray([datastd]*test_size).astype(np.float32)))
       nlls[m], rmses[m] = test_nll, test_performance
 
-# Save results 
+# Save results
 f = open('results/results_'+dnm+'_'+algnm+'_'+str(tr)+'.pk', 'wb')
 res = (w, p, nlls, rmses)
 pk.dump(res, f)

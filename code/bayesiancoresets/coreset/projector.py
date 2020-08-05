@@ -26,7 +26,7 @@ class BlackBoxProjector(Projector):
         lls -= lls.mean(axis=1)[:,np.newaxis]
         if grad:
             if self.grad_loglikelihood is None:
-                raise ValueError('grad_loglikelihood was requested but not initialized in BlackBoxProjector.project')
+              raise ValueError('grad_loglikelihood was requested but not initialized in BlackBoxProjector.project')
             glls = self.grad_loglikelihood(pts, self.samples)
             glls -= glls.mean(axis=2)[:, :, np.newaxis]
             return lls, glls
@@ -44,16 +44,14 @@ class BetaBlackBoxProjector(Projector):
         self.loglikelihood = loglikelihood
         self.beta_gradient = beta_gradient
         self.update(np.array([]), np.array([]))
-        self.encoder = None 
+        self.encoder = None
         if 'nl' in kwargs: # encode pts to a learned feature space
             self.encoder = kwargs['nl']
 
     def project_f(self, pts, beta, grad=False):
         # projections using beta-divergence
-        if self.encoder:
-          pts = pts.astype(np.float32)
-          pts = np.hstack((self.encoder.encode(torch.from_numpy(pts[:, :-1])).detach().numpy(), pts[:,-1][:,np.newaxis]))
-        bls = self.beta_likelihood(pts, self.samples, beta)
+        if self.encoder: bls = self.beta_likelihood(pts, self.samples, beta, self.encoder)
+        else: bls = self.beta_likelihood(pts, self.samples, beta)
         bls -= bls.mean(axis=1)[:,np.newaxis]
         if grad:
             if self.beta_gradient is None:

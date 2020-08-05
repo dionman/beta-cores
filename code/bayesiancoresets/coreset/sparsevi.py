@@ -6,7 +6,7 @@ from .coreset import Coreset
 class SparseVICoreset(Coreset):
   def __init__(self, data, ll_projector, n_subsample_select=None, n_subsample_opt=None,
               opt_itrs=100, step_sched=lambda i : 1./(1.+i), mup=None, SigpInv=None,
-              **kwargs):
+              groups=None, selected_groups=None, **kwargs):
     self.data = data
     self.ll_projector = ll_projector
     self.n_subsample_select = None if n_subsample_select is None else min(data.shape[0], n_subsample_select)
@@ -15,6 +15,8 @@ class SparseVICoreset(Coreset):
     self.opt_itrs = opt_itrs
     self.mup = mup
     self.SigpInv = SigpInv
+    self.groups = groups
+    self.selected_groups = []
     super().__init__(**kwargs)
 
   def _build(self, itrs, sz):
@@ -26,10 +28,9 @@ class SparseVICoreset(Coreset):
       #update the weights
       self._optimize()
 
-  def _get_projection(self, n_subsample, w, p):
+  def _get_projection(self, n_subsample, w, p, select=False):
     #update the projector
     self.ll_projector.update(w, p)
-
     #construct a tangent space
     if n_subsample is None:
       sub_idcs = None
@@ -43,30 +44,61 @@ class SparseVICoreset(Coreset):
       corevecs = self.ll_projector.project(p)
     else:
       corevecs = np.zeros((0, vecs.shape[1]))
-
-    return vecs, sum_scaling, sub_idcs, corevecs
+    if self.groups is None and select:
+      return vecs[~np.all(vecs == 0., axis=1)], sum_scaling, sub_idcs, corevecs
+    else:
+      return vecs, sum_scaling, sub_idcs, corevecs
 
   def _select(self):
-    vecs, sum_scaling, sub_idcs, corevecs = self._get_projection(self.n_subsample_select, self.wts, self.pts)
-    #compute the residual error
-    resid = sum_scaling*vecs.sum(axis=0) - self.wts.dot(corevecs)
-    #compute the correlations for the new subsample
-    corrs = vecs.dot(resid) / np.sqrt((vecs**2).sum(axis=1)) / vecs.shape[1] #up to a constant; good enough for argmax
-    #compute the correlations for the coreset pts (use fabs because we can decrease the weight of these)
-    corecorrs = np.fabs(corevecs.dot(resid) / np.sqrt((corevecs**2).sum(axis=1))) / corevecs.shape[1] #up to a constant; good enough for argmax
+    if self.groups is None: # add new individual datapoint to the coreset
+      vecs, sum_scaling, sub_idcs, corevecs = self._get_projection(self.n_subsample_select, self.wts, self.pts)
+      #compute the residual error
+      resid = sum_scaling*vecs.sum(axis=0) - self.wts.dot(corevecs)
+      #compute the correlations for the new subsample
+      corrs = vecs.dot(resid) / np.sqrt((vecs**2).sum(axis=1)) / vecs.shape[1] #up to a constant; good enough for argmax
+      #compute the correlations for the coreset pts (use fabs because we can decrease the weight of these)
+      corecorrs = np.fabs(corevecs.dot(resid) / np.sqrt((corevecs**2).sum(axis=1))) / corevecs.shape[1] #up to a constant; good enough for argmax
+      #get the best selection; if it's an old coreset pt do nothing, if it's a new point expand and initialize storage for the new pt
+      if corecorrs.size == 0 or corrs.max() > corecorrs.max():
+        f = sub_idcs[np.argmax(corrs)] if sub_idcs is not None else np.argmax(corrs)
+        #expand and initialize storage for new coreset pt
+        #need to double-check that f isn't in self.idcs, since the subsample may contain some of the coreset pts
+        if f not in self.idcs:
+          self.wts.resize(self.wts.shape[0]+1, refcheck=False)
+          self.idcs.resize(self.idcs.shape[0]+1, refcheck=False)
+          self.pts.resize((self.pts.shape[0]+1, self.data.shape[1]), refcheck=False)
+          self.wts[-1] = 0.
+          self.idcs[-1] = f
+          self.pts[-1] = self.data[f]
+    else: # add new group to the coreset
+      vecs, sum_scaling, sub_idcs, corevecs = self._get_projection(self.n_subsample_select, self.wts, self.pts, select=True)
+      groupvecs = np.asarray([vecs[idx,:].sum(axis=0) for idx in self.groups])
+      #compute the residual error
+      resid = sum_scaling*groupvecs.sum(axis=0) - self.wts.dot(corevecs)
+      #compute the correlations for the new subsample
+      corrs = groupvecs.dot(resid) / np.sqrt((groupvecs**2).sum(axis=1)) / groupvecs.shape[1] #up to a constant; good enough for argmax
+      print('corrs : ', corrs.shape)
+      #compute the correlations for the coreset pts (use fabs because we can decrease the weight of these)
+      corecorrs = np.fabs(corevecs.dot(resid) / np.sqrt((corevecs**2).sum(axis=1))) / corevecs.shape[1] #up to a constant; good enough for argmax
+      if corecorrs.size>0: print('corecorrs and corrs shape : ', corecorrs.shape, corrs.shape)
+      #get the best selection; if it's an old coreset pt do nothing, if it's a new point expand and initialize storage for the new pt
+      if corecorrs.size == 0 or corrs.max() > corecorrs.max():
+        print('sub_idcs : ', sub_idcs)
 
-    #get the best selection; if it's an old coreset pt do nothing, if it's a new point expand and initialize storage for the new pt
-    if corecorrs.size == 0 or corrs.max() > corecorrs.max():
-      f = sub_idcs[np.argmax(corrs)] if sub_idcs is not None else np.argmax(corrs)
-      #expand and initialize storage for new coreset pt
-      #need to double-check that f isn't in self.idcs, since the subsample may contain some of the coreset pts
-      if f not in self.idcs:
-        self.wts.resize(self.wts.shape[0]+1, refcheck=False)
-        self.idcs.resize(self.idcs.shape[0]+1, refcheck=False)
-        self.pts.resize((self.pts.shape[0]+1, self.data.shape[1]), refcheck=False)
-        self.wts[-1] = 0.
-        self.idcs[-1] = f
-        self.pts[-1] = self.data[f]
+        f = sub_idcs[self.groups[np.argmax(corrs)]] if sub_idcs is not None else np.argmax(corrs)
+        if f not in self.selected_groups: self.selected_groups.append(f)
+        #expand and initialize storage for new coreset pt
+        #need to double-check that f isn't in self.idcs, since the subsample may contain some of the coreset pts
+        if f not in self.idcs:
+          print('f = ', f)
+          newpoints = self.data[self.groups[f],:]
+          self.wts.resize(self.wts.shape[0]+newpoints.shape[0], refcheck=False)
+          self.idcs.resize(self.idcs.shape[0]+newpoints.shape[0], refcheck=False)
+          self.pts.resize((self.pts.shape[0]+newpoints.shape[0], self.data.shape[1]), refcheck=False)
+          self.wts[-newpoints.shape[0]:] = [0.]*newpoints.shape[0]
+          self.idcs[-newpoints.shape[0]:] = self.groups[f]
+          self.pts[-newpoints.shape[0]:,:] = newpoints
+      print('idcs and pts shapes : ', self.idcs.shape, self.pts.shape)
     return
 
   def _optimize(self):
