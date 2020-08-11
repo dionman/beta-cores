@@ -57,10 +57,10 @@ M=101
 
 for alg in algs:
   if alg[0]=='BPSVI':
-      trials = [fn for fn in os.listdir(fldr_res) if fn.startswith(dnm+'_'+alg[0]+'_frate_'+str(f_rate)+'_i0_10_beta_0.9_graddiag_'+str(graddiag)+'_'+str(structured))]
+      trials = [fn for fn in os.listdir(fldr_res) if fn.startswith(dnm+'_'+alg[0]+'_frate_'+str(f_rate)+'_i0_0.1_beta_0.9_graddiag_'+str(graddiag)+'_'+str(structured))]
   else:
-      trials = [fn for fn in os.listdir(fldr_res) if fn.startswith(dnm+'_'+alg[0]+'_frate_'+str(f_rate)+'_i0_'+str(int(i0))+'_beta_'+str(beta)+'_graddiag_'+str(graddiag)+'_'+str(structured))]
-  print('trials : ', trials)
+      trials = [fn for fn in os.listdir(fldr_res) if fn.startswith(dnm+'_'+alg[0]+'_frate_'+str(f_rate)+'_i0_'+str((i0))+'_beta_'+str(beta)+'_graddiag_'+str(graddiag)+'_'+str(structured))]
+  print('trials : ', dnm+'_'+alg[0]+'_frate_'+str(f_rate)+'_i0_'+str(int(i0))+'_beta_'+str(beta)+'_graddiag_'+str(graddiag)+'_'+str(structured))
   if len(trials) == 0:
     fig.line([], [], color=alg[2], legend_label=alg[1], line_width=10); fig.patch([], [], color=alg[2], legend_label=alg[1], alpha=0.3)
     fig2.line([], [], color=alg[2], legend_label=alg[1], line_width=10); fig2.patch([], [], color=alg[2], legend_label=alg[1], alpha=0.3)
