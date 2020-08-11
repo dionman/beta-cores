@@ -1,25 +1,25 @@
 import numpy as np
 import scipy.linalg as sl
 import pandas
+from sklearn.preprocessing import MinMaxScaler
 
 def load_data(name, data_dir):
   """
   Return data from UCI sets
   :return: Inputs, outputs
   """
-  if name in [ 'concrete']:
-    data = np.array(pandas.read_excel('{}/{}.xls'.format(data_dir, name)))
-  elif name in ['energy', 'power']:
-    data = np.array(pandas.read_excel('{}/{}.xlsx'.format(data_dir, name)))
-  elif name in ['kin8nm', 'protein']:
-    data = np.array(pandas.read_csv('{}/{}.csv'.format(data_dir, name)))
-  elif name in ['naval', 'yacht']:
-    data = np.loadtxt('{}/{}.txt'.format(data_dir, name))
-  elif name in ['wine']:
-    data = np.array(pandas.read_csv('{}/{}.csv'.format(data_dir, name), delimiter=';'))
-  elif name in ['boston']:
+  if name in ['boston']:
     from sklearn.datasets import load_boston
     data = load_boston()
+  elif name in ['news']:
+    data = pandas.read_csv('{}/{}.csv'.format(data_dir, name))
+    data.drop([c for c in list(data.columns) if '_is_' in c], axis=1, inplace=True)
+    data = data.iloc[1:,2:].to_numpy()
+    min_max_scaler = MinMaxScaler()
+    X =  data[:, :-1]
+    X = min_max_scaler.fit_transform(data[:, :-1])
+    Y =  data[:, -1:]
+    return (X, Y)
   elif name in ['year']:
     data = np.loadtxt('{}/{}.txt'.format(data_dir, name), delimiter=',')
   else:
@@ -36,17 +36,17 @@ def load_data(name, data_dir):
   return (X, Y)
 
 def preprocessing(Xtrain, ytrain, Xinit, yinit, Xtest, ytest):
-    input_mean, input_std =  np.mean(Xtrain, axis=0), np.std(Xtrain, axis=0)
-    input_std[np.isclose(input_std, 0.)] = 1.
-    output_mean, output_std =  np.mean(ytrain, axis=0), np.std(ytrain, axis=0)
-    output_std[np.isclose(output_std, 0.)] = 1.
-    ytrain = (ytrain - output_mean) / output_std
-    Xtrain = (Xtrain - input_mean) / input_std
-    yinit = (yinit - output_mean) / output_std
-    Xinit = (Xinit - input_mean) / input_std
-    ytest = (ytest - output_mean) / output_std
-    Xtest = (Xtest - input_mean) / input_std
-    return Xtrain, ytrain, Xinit, yinit, Xtest, ytest, input_mean, input_std, output_mean, output_std
+  input_mean, input_std =  np.mean(Xtrain, axis=0), np.std(Xtrain, axis=0)
+  input_std[np.isclose(input_std, 0.)] = 1.
+  output_mean, output_std =  np.mean(ytrain, axis=0), np.std(ytrain, axis=0)
+  output_std[np.isclose(output_std, 0.)] = 1.
+  ytrain = (ytrain - output_mean) / output_std
+  Xtrain = (Xtrain - input_mean) / input_std
+  yinit = (yinit - output_mean) / output_std
+  Xinit = (Xinit - input_mean) / input_std
+  ytest = (ytest - output_mean) / output_std
+  Xtest = (Xtest - input_mean) / input_std
+  return Xtrain, ytrain, Xinit, yinit, Xtest, ytest, input_mean, input_std, output_mean, output_std
 
 def perturb(X_train, y_train, noise_x=(0,5), f_rate=0.1, structured=False, mean_val=0.1, std_val=1., theta_val=-1.):
   N, D = X_train.shape
@@ -78,7 +78,6 @@ def neurlinr_loglikelihood(z, th, sigsq):
   th = np.atleast_2d(th)
   XST = x.dot(th.T)
   vals= -1./2.*np.log(2.*np.pi*sigsq) - 1./(2.*sigsq)*(y[:,np.newaxis]**2 - 2*XST*y[:,np.newaxis] + XST**2)
-  print('vals : ', vals)
   return vals
 
 def neurlinr_grad_x_loglikelihood(z, th, sigsq):
@@ -92,7 +91,6 @@ def neurlinr_beta_likelihood(z, th, beta, sigsq):
   XST = x.dot(th.T)
   vals = 1./(2*np.pi*sigsq)**(beta/2.)*(-(beta+1.)/beta*np.exp(-beta/(2.*sigsq)*(y[:,np.newaxis]**2 - 2*XST*y[:,np.newaxis] + XST**2))
                                         +1./np.sqrt(1.+beta))
-  #print('vals : ', vals)
   return vals
 
 

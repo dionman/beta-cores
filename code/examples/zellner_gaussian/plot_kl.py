@@ -35,6 +35,9 @@ for i, nm in enumerate(nms):
     if nm[0]=='BCORES':
       numTuple = (prfx, str(bvalue), f_rate, nm[0], str(tr))
       x_, mu0_, Sig0_, Sig_, mup_, Sigp_, w_, p_, muw_, Sigw_, rklw_, fklw_, beta_ = np.load(os.path.join(prfx, '_'.join(numTuple)+'.pk'), allow_pickle=True)
+    elif nm[0]=='BPSVI':
+      numTuple = (prfx, f_rate, nm[0], str(tr))
+      x_, mu0_, Sig0_, Sig_, mup_, Sigp_, w_, p_, muw_, Sigw_, rklw_, fklw_ = np.load('results/results_0.01_0_i0_1.0_BPSVI_'+str(tr)+'.pk', allow_pickle=True)
     else:
       numTuple = (prfx, f_rate, nm[0], str(tr))
       x_, mu0_, Sig0_, Sig_, mup_, Sigp_, w_, p_, muw_, Sigw_, rklw_, fklw_ = np.load(os.path.join(prfx, '_'.join(numTuple)+'.pk'), allow_pickle=True)

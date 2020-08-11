@@ -6,7 +6,7 @@ from .coreset import Coreset
 class SparseVICoreset(Coreset):
   def __init__(self, data, ll_projector, n_subsample_select=None, n_subsample_opt=None,
               opt_itrs=100, step_sched=lambda i : 1./(1.+i), mup=None, SigpInv=None,
-              groups=None, selected_groups=None, **kwargs):
+              groups=None, selected_groups=None, initialized=False, **kwargs):
     self.data = data
     self.ll_projector = ll_projector
     self.n_subsample_select = None if n_subsample_select is None else min(data.shape[0], n_subsample_select)
@@ -18,6 +18,7 @@ class SparseVICoreset(Coreset):
     self.groups = groups
     self.selected_groups = []
     super().__init__(**kwargs)
+    self.initialized = int(initialized)*len(self.wts)
 
   def _build(self, itrs, sz):
     if self.size()+itrs > sz:
@@ -77,20 +78,27 @@ class SparseVICoreset(Coreset):
       resid = sum_scaling*groupvecs.sum(axis=0) - self.wts.dot(corevecs)
       #compute the correlations for the new subsample
       corrs = groupvecs.dot(resid) / np.sqrt((groupvecs**2).sum(axis=1)) / groupvecs.shape[1] #up to a constant; good enough for argmax
-      print('corrs : ', corrs.shape)
+      #print('corrs : ', corrs.shape)
       #compute the correlations for the coreset pts (use fabs because we can decrease the weight of these)
       corecorrs = np.fabs(corevecs.dot(resid) / np.sqrt((corevecs**2).sum(axis=1))) / corevecs.shape[1] #up to a constant; good enough for argmax
+      #print('corecorrs : ', corecorrs, 'corrs :', corrs, np.argmax(corrs))
+
       if corecorrs.size>0: print('corecorrs and corrs shape : ', corecorrs.shape, corrs.shape)
       #get the best selection; if it's an old coreset pt do nothing, if it's a new point expand and initialize storage for the new pt
-      if corecorrs.size == 0 or corrs.max() > corecorrs.max():
-        print('sub_idcs : ', sub_idcs)
+
+      if corecorrs.shape[0]>self.initialized :
+        maxcorecors = corecorrs[self.initialized:].max()
+      else:
+        maxcorecors = -np.inf
+      if corecorrs.size == 0 or corrs.max() > maxcorecors:
+        print('\n\n\nsub_idcs : ', sub_idcs)
 
         f = sub_idcs[self.groups[np.argmax(corrs)]] if sub_idcs is not None else np.argmax(corrs)
+        print('f = ', f)
         if f not in self.selected_groups: self.selected_groups.append(f)
         #expand and initialize storage for new coreset pt
         #need to double-check that f isn't in self.idcs, since the subsample may contain some of the coreset pts
         if f not in self.idcs:
-          print('f = ', f)
           newpoints = self.data[self.groups[f],:]
           self.wts.resize(self.wts.shape[0]+newpoints.shape[0], refcheck=False)
           self.idcs.resize(self.idcs.shape[0]+newpoints.shape[0], refcheck=False)
