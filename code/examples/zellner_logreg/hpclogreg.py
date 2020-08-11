@@ -4,7 +4,6 @@ import os, sys
 from multiprocessing import Pool
 sys.path.insert(1, os.path.join(sys.path[0], '../..'))
 import bayesiancoresets as bc
-#make it so we can import models/etc from parent folder
 sys.path.insert(1, os.path.join(sys.path[0], '../common'))
 import gaussian
 from scipy.optimize import minimize, nnls
@@ -21,12 +20,12 @@ def linearize():
   c = -1
   for beta in [0.9]:
     for tr in range(5): # trial number
-      for nm in ["BCORES", "SVI"]: # coreset method
-        for i0 in [1]:
+      for nm in ["BPSVI"]: #, "SVI"]: # coreset method
+        for i0 in [0.1, 1, 10]:
           for f_rate in [0]: #30
-            for graddiag in [True]:
+            for graddiag in [False]:
               for structured in [False]:
-               for dnm in ["webspam"]: #, "webspam"]:
+               for dnm in ["adult", "phish"]: #, "webspam"]: #, "webspam"]:
                   c += 1
                   args_dict[c] = (tr, nm, dnm, f_rate, beta, i0, graddiag, structured)
   return args_dict
@@ -58,6 +57,25 @@ model {
 }
 """
 
+weighted_logistic_code1 = """
+data {
+  int<lower=0> N; // number of observations
+  int<lower=0> d; // dimensionality of x
+  matrix[N,d] x; // inputs
+  int<lower=0,upper=1> y[N]; // outputs in {0, 1}
+  vector[N] w; // weights
+}
+parameters {
+  vector[d] theta; // logreg params
+}
+model {
+  theta ~ normal(0, 1);
+  for(n in 1:N){
+    target += w[n]*bernoulli_logit_lpmf(y[n]| x[n]*theta);
+  }
+}
+"""
+
 if not os.path.exists('pystan_model_logistic.pk'):
   sml = pystan.StanModel(model_code=weighted_logistic_code)
   f = open('pystan_model_logistic.pk','wb')
@@ -67,6 +85,16 @@ else:
   f = open('pystan_model_logistic.pk','rb')
   sml = pk.load(f)
   f.close()
+
+if not os.path.exists('pystan_model_logistic1.pk'):
+  sml1 = pystan.StanModel(model_code=weighted_logistic_code1)
+  f1 = open('pystan_model_logistic1.pk','wb')
+  pk.dump(sml1, f1)
+  f1.close()
+else:
+  f1 = open('pystan_model_logistic1.pk','rb')
+  sml1 = pk.load(f1)
+  f1.close()
 
 #computes the Laplace approximation N(mu, Sig) to the posterior with weights wts
 def get_laplace(wts, Z, mu0, diag=False):
@@ -215,12 +243,20 @@ if nm=='PRIOR':
 else:
   for m in range(M+1):
     print('evaluating for m=',m)
-    cx, cy = p[m][:, :-1], ls[m].astype(int)
-    cy[cy==-1] = 0
-    sampler_data = {'x': cx, 'y': cy, 'd': cx.shape[1], 'N': cx.shape[0], 'w': w[m]}
-    thd = sampler_data['d']+1
-    fit = sml.sampling(data=sampler_data, iter=N_per*2, chains=1, control={'adapt_delta':0.9, 'max_treedepth':15}, verbose=False)
-    thetas = np.roll(fit.extract(permuted=False)[:, 0, :thd], -1)
+    if nm!='BPSVI':
+      cx, cy = p[m][:, :-1], ls[m].astype(int)
+      cy[cy==-1] = 0
+      sampler_data = {'x': cx, 'y': cy, 'd': cx.shape[1], 'N': cx.shape[0], 'w': w[m]}
+      thd = sampler_data['d']+1
+      fit = sml.sampling(data=sampler_data, iter=N_per*2, chains=1, control={'adapt_delta':0.9, 'max_treedepth':15}, verbose=False)
+      thetas = np.roll(fit.extract(permuted=False)[:, 0, :thd], -1)
+    else:
+      cx, cy = p[m][:, :], ls[m].astype(int)
+      cy[cy==-1] = 0
+      sampler_data = {'x': cx, 'y': cy, 'd': cx.shape[1], 'N': cx.shape[0], 'w': w[m]}
+      thd = sampler_data['d']
+      fit = sml1.sampling(data=sampler_data, iter=N_per*2, chains=1, control={'adapt_delta':0.9, 'max_treedepth':15}, verbose=False)
+      thetas = np.roll(fit.extract(permuted=False)[:, 0, :thd], -1)
     accs[m] = compute_accuracy(Xt, Yt, thetas)
     pll[m] = np.sum(log_likelihood(Yt[:, np.newaxis]*Xt, thetas))/float(Xt.shape[0]*thetas.shape[0])
 print('accuracies : ', accs)

@@ -42,6 +42,25 @@ model {
 }
 """
 
+weighted_logistic_code1 = """
+data {
+  int<lower=0> N; // number of observations
+  int<lower=0> d; // dimensionality of x
+  matrix[N,d] x; // inputs
+  int<lower=0,upper=1> y[N]; // outputs in {0, 1}
+  vector[N] w; // weights
+}
+parameters {
+  vector[d] theta; // logreg params
+}
+model {
+  theta ~ normal(0, 1);
+  for(n in 1:N){
+    target += w[n]*bernoulli_logit_lpmf(y[n]| x[n]*theta);
+  }
+}
+"""
+
 if not os.path.exists('pystan_model_logistic.pk'):
   sml = pystan.StanModel(model_code=weighted_logistic_code)
   f = open('pystan_model_logistic.pk','wb')
@@ -51,6 +70,17 @@ else:
   f = open('pystan_model_logistic.pk','rb')
   sml = pk.load(f)
   f.close()
+
+if not os.path.exists('pystan_model_logistic1.pk'):
+  sml1 = pystan.StanModel(model_code=weighted_logistic_code1)
+  f1 = open('pystan_model_logistic1.pk','wb')
+  pk.dump(sml1, f1)
+  f1.close()
+else:
+  f1 = open('pystan_model_logistic1.pk','rb')
+  sml1 = pk.load(f1)
+  f1.close()
+
 
 #computes the Laplace approximation N(mu, Sig) to the posterior with weights wts
 def get_laplace(wts, Z, mu0, diag=False):
@@ -189,6 +219,8 @@ if nm=='PRIOR':
 else:
   for m in range(M+1):
     cx, cy = p[m], ls[m].astype(int)
+    print(p[m].shape)
+    exit()
     cy[cy==-1] = 0
     sampler_data = {'x': cx, 'y': cy, 'd': cx.shape[1], 'N': cx.shape[0], 'w': w[m]}
     thd = sampler_data['d']+1

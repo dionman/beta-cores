@@ -31,8 +31,8 @@ def linearize():
   return args_dict
 
 mapping = linearize()
-ID, nm, f_rate, beta = mapping[int(sys.argv[1])]
-#ID, nm, f_rate, beta = mapping[0]
+#ID, nm, f_rate, beta = mapping[int(sys.argv[1])]
+ID, nm, f_rate, beta = mapping[0]
 
 dnm = "diabetes" #"adult"
 graddiag = False # diagonal Gaussian assumption for coreset sampler
@@ -123,6 +123,8 @@ f.close()
 (groups, demos)=res
 groups = [[k for k in g if k<Z.shape[0]] for g in groups]
 grouptot = sum([len(g) for g in groups])
+print(demos)
+exit()
 
 if f_rate>0:
   for (g,d) in zip(groups,demos):

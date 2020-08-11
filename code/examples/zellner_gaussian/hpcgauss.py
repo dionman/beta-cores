@@ -4,38 +4,27 @@ import os, sys
 sys.path.insert(1, os.path.join(sys.path[0], '../..')) # read library from local folder: can be removed if it's installed systemwide
 import bayesiancoresets as bc
 from scipy.stats import multivariate_normal
-# make it so we can import models/etc from parent folder
 sys.path.insert(1, os.path.join(sys.path[0], '../common'))
 import gaussian
 from gaussian import *
 
-#def linearize():
-#  args_dict = dict()
-#  c = -1
-#  for tr in range(5): # trial number
-#    for nm in ["PRIOR", "RAND", "BCORES", "BPSVI", "SVI", "GIGAO", "GIGAR"]: # coreset method
-#      for d in [20]: 
-#        for f_rate in [0, 15, 30]:
-#          c += 1
-#          args_dict[c] = (tr, nm, d, f_rate) 
-#  return args_dict
-
 def linearize():
   args_dict = dict()
   c = -1
-  for beta in [0.01, 0.1]: # [0.1, 0.5, 0.9, 1.]:
+  for beta in [0.01]: 
     for tr in range(5): # trial number
-      for nm in ["BCORES"]: # coreset method
+      for nm in ['BPSVI']: #["BCORES"]: # coreset method
         for d in [20]:
-          for f_rate in [0, 15, 30]:
-            c += 1
-            args_dict[c] = (tr, nm, d, f_rate, beta)
+          for f_rate in [0]: #[0, 15, 30]:
+            for i0 in [0.01, 0.1, 1.]:
+              c += 1
+              args_dict[c] = (tr, nm, d, f_rate, beta, i0)
   return args_dict
 
 
 mapping = linearize()
-tr, nm, d, f_rate, beta = mapping[int(sys.argv[1])]
-#tr, nm, d, f_rate = mapping[0]
+tr, nm, d, f_rate, beta, i0 = mapping[int(sys.argv[1])]
+#tr, nm, d, f_rate, beta, i0 = mapping[0]
 np.random.seed(int(tr))
 
 results_fldr = '/home/dm754/rds/hpc-work/zellner_gaussian/results'
@@ -50,7 +39,6 @@ n_subsample_opt = 200
 n_subsample_select = 1000
 proj_dim = 200
 pihat_noise = 0.75
-i0 = 10. # starting learning rate
 BPSVI_step_sched = lambda m: lambda i : i0/(1.+i)
 SVI_step_sched = lambda i : i0/(1.+i)
 BCORES_step_sched = lambda i : i0/(1.+i)
@@ -168,7 +156,6 @@ else:
       #store weights
       if nm=='BCORES':
         wts, pts, idcs, beta = alg.get()
-        print(alg.get())
       else:
         wts, pts, idcs = alg.get()
       w.append(wts)
@@ -190,10 +177,9 @@ for m in range(M+1):
   fklw[m] = gaussian.gaussian_KL(mup, Sigp, muw[m,:], LSigwInv.dot(LSigwInv.T))
   if nm=='BCORES': betas[m] = beta
 
-f = open(results_fldr+'/results_'+str(beta)+'_'+str(f_rate)+'_'+nm+'_'+str(tr)+'.pk', 'wb')
+f = open(results_fldr+'/results_'+str(beta)+'_'+str(f_rate)+'_i0_'+str(i0)+'_'+nm+'_'+str(tr)+'.pk', 'wb')
 if nm=='BCORES':
   res = (X, mu0, Sig0, Sig, mup, Sigp, w, p, muw, Sigw, rklw, fklw, betas)
-  print('betas : ', betas)
 else:
   res = (X, mu0, Sig0, Sig, mup, Sigp, w, p, muw, Sigw, rklw, fklw)
 print('rklw :', rklw)
