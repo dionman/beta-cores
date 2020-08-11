@@ -11,7 +11,7 @@ from scipy.optimize import minimize, nnls
 import scipy.linalg as sl
 from model_lr import *
 import pystan
-import random 
+import random
 
 # specify random number only for test size randomization (common across trials)
 np.random.seed(42)
@@ -118,7 +118,7 @@ X, Y, Z, x_mean, x_std = std_cov(X, Y) # standardize covariates
 N, D = X.shape
 
 f = open('../data/vq_groups_sensemake_diabetes.pk', 'rb')
-res = pk.load(f) 
+res = pk.load(f)
 f.close()
 (groups, demos)=res
 groups = [[k for k in g if k<Z.shape[0]] for g in groups]
@@ -151,8 +151,8 @@ def update_per_t(t, maxGroups=20, groupcap=50):
     datapoints = flatten([groups[idx] if len(groups[idx])<groupcap else random.sample(groups[idx], groupcap) for idx in idcs[:(j+1)]]) # cap maximum group size
     vs[j+1] = eval(datapoints, X, Y, Xt, Yt)
     phis[idcs[j]] += vs[j+1]-vs[j] # add new marginal for group idcs[j]
-    occs[idcs[j]] += 1 
-  return phis, occs 
+    occs[idcs[j]] += 1
+  return phis, occs
 
 def dshapley(groups, X, Y, Xt, Yt, T=5000):
   pool = Pool(processes=100)
@@ -220,7 +220,7 @@ if nm=='BCORES':
       p.append(pts)
       dem+=[[demos[selgroup] for selgroup in alg.selected_groups]]
       ls.append(Y[idcs])
-      indices.append(np.array(flatten([groups[idx] for idx in alg.selected_groups]))) 
+      indices.append(np.array(flatten([groups[idx] for idx in alg.selected_groups])))
     else:
       w.append(np.array([0.]))
       p.append(np.zeros((1,D)))

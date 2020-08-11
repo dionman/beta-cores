@@ -98,6 +98,8 @@ class BetaCoreset(Coreset):
     else: # add new group to the coreset
       vecs, sum_scaling, sub_idcs, corevecs = self._get_projection(self.n_subsample_select, self.wts, self.pts, self.beta, select=True)
       groupvecs = np.asarray([vecs[idx,:].sum(axis=0) for idx in self.groups])
+      print('groupvecs shape : ', groupvecs.shape)
+
       #compute the residual error
       resid = sum_scaling*groupvecs.sum(axis=0) - self.wts.dot(corevecs)
       #resid = sum_scaling*vecs.sum(axis=0) - self.wts.dot(corevecs)
@@ -108,11 +110,13 @@ class BetaCoreset(Coreset):
       if corecorrs.size>0: print('corecorrs and corrs shape : ', corecorrs.shape, corrs.shape)
       #get the best selection; if it's an old coreset pt do nothing, if it's a new point expand and initialize storage for the new pt
       if corecorrs.size == 0 or corrs.max() > corecorrs.max():
-        f = sub_idcs[self.group[np.argmax(corrs)]] if sub_idcs is not None else np.argmax(corrs)
+        print('sub_idcs : ', sub_idcs)
+        f = sub_idcs[self.groups[np.argmax(corrs)]] if sub_idcs is not None else np.argmax(corrs)
         if f not in self.selected_groups: self.selected_groups.append(f)
         #expand and initialize storage for new coreset pt
         #need to double-check that f isn't in self.idcs, since the subsample may contain some of the coreset pts
         if f not in self.idcs:
+          print('f = ', f)
           newpoints = self.data[self.groups[f],:]
           self.wts.resize(self.wts.shape[0]+newpoints.shape[0], refcheck=False)
           self.idcs.resize(self.idcs.shape[0]+newpoints.shape[0], refcheck=False)
@@ -146,7 +150,7 @@ class BetaCoreset(Coreset):
         return -corevecs.dot(resid) / corevecs.shape[1]
       x0 = self.wts
       self.wts = nn_opt(x0, grd, opt_itrs=self.opt_itrs, step_sched = self.step_sched)
-
+      
   def error(self):
     return 0. #TODO: implement KL estimate
 

@@ -35,6 +35,34 @@ def load_data(name, data_dir):
     Y = data[:, -1:]
   return (X, Y)
 
+def preprocessing(Xtrain, ytrain, Xinit, yinit, Xtest, ytest):
+    input_mean, input_std =  np.mean(Xtrain, axis=0), np.std(Xtrain, axis=0)
+    input_std[np.isclose(input_std, 0.)] = 1.
+    output_mean, output_std =  np.mean(ytrain, axis=0), np.std(ytrain, axis=0)
+    output_std[np.isclose(output_std, 0.)] = 1.
+    ytrain = (ytrain - output_mean) / output_std
+    Xtrain = (Xtrain - input_mean) / input_std
+    yinit = (yinit - output_mean) / output_std
+    Xinit = (Xinit - input_mean) / input_std
+    ytest = (ytest - output_mean) / output_std
+    Xtest = (Xtest - input_mean) / input_std
+    return Xtrain, ytrain, Xinit, yinit, Xtest, ytest, input_mean, input_std, output_mean, output_std
+
+def perturb(X_train, y_train, noise_x=(0,5), f_rate=0.1, structured=False, mean_val=0.1, std_val=1., theta_val=-1.):
+  N, D = X_train.shape
+  o = np.int(N*f_rate)
+  idxx = np.random.choice(N, size=o)
+  if not structured: # random noise/mislabeling in input/output space
+    idxy = np.random.choice(N, size=o)
+    idcs =  np.random.choice(D,int(D/2.),replace=False)
+    for i in idcs: # replace half of the features with gaussian noise
+      X_train[idxx,i] = np.random.normal(noise_x[0], noise_x[1], size=o)
+    if o>0: y_train[idxy] = np.random.normal(noise_x[0], noise_x[1], size=o)[:,np.newaxis]
+  else: # structured perturbation for desirable adversarial outcome
+    NotImplementedError
+  outidx = np.unique(np.concatenate([idxx, idxy]))
+  return X_train, y_train
+
 def build_synthetic_dataset(N=2000, noise_std=0.1, D=40):
   d = D+1 # dimensionality of w
   w = 10+np.random.randn(d)
@@ -49,9 +77,26 @@ def neurlinr_loglikelihood(z, th, sigsq):
   y = z[:, -1]
   th = np.atleast_2d(th)
   XST = x.dot(th.T)
-  return -1./2.*np.log(2.*np.pi*sigsq) - 1./(2.*sigsq)*(y[:,np.newaxis]**2 - 2*XST*y[:,np.newaxis] + XST**2)
+  vals= -1./2.*np.log(2.*np.pi*sigsq) - 1./(2.*sigsq)*(y[:,np.newaxis]**2 - 2*XST*y[:,np.newaxis] + XST**2)
+  print('vals : ', vals)
+  return vals
 
 def neurlinr_grad_x_loglikelihood(z, th, sigsq):
+  pass
+
+def neurlinr_beta_likelihood(z, th, beta, sigsq):
+  z = np.atleast_2d(z)
+  x = z[:, :-1]
+  y = z[:, -1]
+  th = np.atleast_2d(th)
+  XST = x.dot(th.T)
+  vals = 1./(2*np.pi*sigsq)**(beta/2.)*(-(beta+1.)/beta*np.exp(-beta/(2.*sigsq)*(y[:,np.newaxis]**2 - 2*XST*y[:,np.newaxis] + XST**2))
+                                        +1./np.sqrt(1.+beta))
+  #print('vals : ', vals)
+  return vals
+
+
+def neurlinr_beta_gradient(z, th, beta, Siginv, logdetSig):
   pass
 
 def weighted_post(th0, Sig0inv, sigsq, z, w):
