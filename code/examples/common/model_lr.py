@@ -82,7 +82,6 @@ def beta_likelihood(z, th, beta):
   z = np.atleast_2d(z)
   th = np.atleast_2d(th)
   m = -z.dot(th.T)
-  #print(np.max(m), np.min(m))
   m = -(((beta+1.)/beta)*(1+np.exp(m))**(-beta) - ((1+np.exp(m))**(-beta-1.) + (1+np.exp(-m))**(-beta-1.)))
   return m
 

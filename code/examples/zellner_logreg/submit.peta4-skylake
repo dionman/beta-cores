@@ -27,7 +27,7 @@
 ##SBATCH --no-requeue
 #! Submit a job array with index values between 0 and 31
 #! NOTE: This must be a range, not a single number (i.e. specifying '32' here would only run one job, with index 32)
-#SBATCH --array=0-29
+#SBATCH --array=0-9
 
 #! For 6GB per CPU, set "-p skylake"; for 12GB per CPU, set "-p skylake-himem": 
 #SBATCH -p skylake-himem

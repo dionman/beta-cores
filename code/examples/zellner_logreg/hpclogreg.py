@@ -21,11 +21,11 @@ def linearize():
   for beta in [0.9]:
     for tr in range(5): # trial number
       for nm in ["BPSVI"]: #, "SVI"]: # coreset method
-        for i0 in [0.1, 1, 10]:
+        for i0 in [0.01, 1.0]:
           for f_rate in [0]: #30
             for graddiag in [False]:
               for structured in [False]:
-               for dnm in ["adult", "phish"]: #, "webspam"]: #, "webspam"]:
+               for dnm in ["adult"]: #, "phish"]: #, "webspam"]: #, "webspam"]:
                   c += 1
                   args_dict[c] = (tr, nm, dnm, f_rate, beta, i0, graddiag, structured)
   return args_dict
@@ -143,7 +143,10 @@ sz = 1000
 print('Loading dataset '+dnm)
 X, Y, Xt, Yt = load_data('../data/'+dnm+'.npz') # read train and test data
 X, Y, Z, x_mean, x_std = std_cov(X, Y) # standardize covariates for training data
-if f_rate>0: X, Y, Z, _ = perturb(X, Y, f_rate=0.01*f_rate, structured=structured) # corrupt datapoints
+if f_rate>0: 
+  X, Y, Z, _ = perturb(X, Y, f_rate=0.01*f_rate, structured=structured) # corrupt datapoints
+else:
+  print('zero corruption')
 N, D = X.shape
 print('N, D : ', N, D)
 # make sure test set is adequate for evaluation via the predictive accuracy metric
@@ -243,20 +246,22 @@ if nm=='PRIOR':
 else:
   for m in range(M+1):
     print('evaluating for m=',m)
-    if nm!='BPSVI':
-      cx, cy = p[m][:, :-1], ls[m].astype(int)
-      cy[cy==-1] = 0
-      sampler_data = {'x': cx, 'y': cy, 'd': cx.shape[1], 'N': cx.shape[0], 'w': w[m]}
-      thd = sampler_data['d']+1
-      fit = sml.sampling(data=sampler_data, iter=N_per*2, chains=1, control={'adapt_delta':0.9, 'max_treedepth':15}, verbose=False)
-      thetas = np.roll(fit.extract(permuted=False)[:, 0, :thd], -1)
-    else:
-      cx, cy = p[m][:, :], ls[m].astype(int)
-      cy[cy==-1] = 0
-      sampler_data = {'x': cx, 'y': cy, 'd': cx.shape[1], 'N': cx.shape[0], 'w': w[m]}
-      thd = sampler_data['d']
-      fit = sml1.sampling(data=sampler_data, iter=N_per*2, chains=1, control={'adapt_delta':0.9, 'max_treedepth':15}, verbose=False)
-      thetas = np.roll(fit.extract(permuted=False)[:, 0, :thd], -1)
+    #if nm!='DBPSVI':
+    cx, cy = p[m][:, :-1], ls[m].astype(int)
+    cy[cy==-1] = 0
+    sampler_data = {'x': cx, 'y': cy, 'd': cx.shape[1], 'N': cx.shape[0], 'w': w[m]}
+    thd = sampler_data['d']+1
+    fit = sml.sampling(data=sampler_data, iter=N_per*2, chains=1, control={'adapt_delta':0.9, 'max_treedepth':15}, verbose=False)
+    thetas = np.roll(fit.extract(permuted=False)[:, 0, :thd], -1)
+    #else:
+    #  cx, cy = p[m][:, :-1], ls[m].astype(int)
+    #  cy[cy==-1] = 0
+    #  sampler_data = {'x': cx, 'y': cy, 'd': cx.shape[1], 'N': cx.shape[0], 'w': w[m]}
+    #  thd = sampler_data['d']
+    #  fit = sml1.sampling(data=sampler_data, iter=N_per*2, chains=1, control={'adapt_delta':0.9, 'max_treedepth':15}, verbose=False)
+    #  thetas = np.roll(fit.extract(permuted=False)[:, 0, :thd], -1)
+    #  print('here!')
+    #print('thetas for m=',m, thetas)
     accs[m] = compute_accuracy(Xt, Yt, thetas)
     pll[m] = np.sum(log_likelihood(Yt[:, np.newaxis]*Xt, thetas))/float(Xt.shape[0]*thetas.shape[0])
 print('accuracies : ', accs)
