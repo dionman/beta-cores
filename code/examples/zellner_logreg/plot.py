@@ -20,7 +20,7 @@ fldr_figs=sys.argv[2]
 fldr_res=sys.argv[3]
 beta=float(sys.argv[4])
 i0=float(sys.argv[5])
-f_rate=int(sys.argv[6])
+f_rate=int(float(sys.argv[6]))
 graddiag=str(sys.argv[7])
 structured=str(sys.argv[8])
 
@@ -57,9 +57,10 @@ M=101
 
 for alg in algs:
   if alg[0]=='BPSVI':
-      trials = [fn for fn in os.listdir(fldr_res) if fn.startswith(dnm+'_'+alg[0]+'_frate_'+str(f_rate)+'_i0_0.1_beta_0.9_graddiag_'+str(graddiag)+'_'+str(structured))]
+      trials = [fn for fn in os.listdir(fldr_res) if fn.startswith(dnm+'_'+alg[0]+'_frate_'+str(f_rate)+'_i0_10_beta_0.9_graddiag_'+str(graddiag)+'_'+str(structured))]
   else:
       trials = [fn for fn in os.listdir(fldr_res) if fn.startswith(dnm+'_'+alg[0]+'_frate_'+str(f_rate)+'_i0_'+str(int(i0))+'_beta_'+str(beta)+'_graddiag_'+str(graddiag)+'_'+str(structured))]
+  print('trials : ', trials)
   if len(trials) == 0:
     fig.line([], [], color=alg[2], legend_label=alg[1], line_width=10); fig.patch([], [], color=alg[2], legend_label=alg[1], alpha=0.3)
     fig2.line([], [], color=alg[2], legend_label=alg[1], line_width=10); fig2.patch([], [], color=alg[2], legend_label=alg[1], alpha=0.3)
@@ -76,7 +77,6 @@ for alg in algs:
     wts = res[0]
     pts = res[1]
     accs[tridx] = res[2]
-    print(res[3])
     plls[tridx]  = -res[3]
     cszs[tridx, :] = np.array([len(w) for w in wts])
 

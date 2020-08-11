@@ -33,7 +33,7 @@ if dnm=='synthetic':
 else:
   X, Y = load_data(dnm, data_dir='../data')
   N = Y.shape[0]  # number of data points
-init_size = int(0.05*N)
+init_size = 20 #max(20, int(0.01*N))
 test_size = int(0.1*N)
 
 # Split datasets
@@ -46,8 +46,7 @@ X, Y = perturb(X, Y, f_rate=f_rate)# corrupt datapoints
 Z_init = np.hstack((X_init, Y_init)).astype(np.float32)
 Z = np.hstack((X, Y)).astype(np.float32)
 Z_test = np.hstack((X_test, Y_test)).astype(np.float32)
-
-print('y_test originally : ', Y_test)
+print(X.shape, Y.shape, X_init.shape, Y_init.shape, X_test.shape, Y_test.shape)
 
 # Specify encoder and coreset hyperparameters
 out_features = 30 # dimension of the ouput of the neural encoder used for lin reg
@@ -56,8 +55,8 @@ train_nn_freq = 1 # frequency of nn training wrt coreset iterations
 VI_opt_itrs = 1000
 n_subsample_opt = 1000
 n_subsample_select = 1000
-proj_dim = 100
-i0 = 1. # starting learning rate
+proj_dim = 200
+i0 = .1 # starting learning rate
 SVI_step_sched = lambda i : i0/(1.+i)
 #BPSVI_step_sched = lambda m: lambda i : i0/(1.+i)
 BCORES_step_sched = lambda i : i0/(1.+i)
@@ -78,7 +77,7 @@ deep_encoder = lambda nl, z: (np.hstack((nl.encode(torch.from_numpy(z[:, :-1].as
                                             z[:,-1][:,np.newaxis].astype(np.float32))))
 log_likelihood = lambda z, th, nl: neurlinr_loglikelihood(deep_encoder(nl, z), th, datastd**2)
 grad_log_likelihood = lambda z, th, nl:  NotImplementedError
-beta_likelihood = lambda z, th, beta, nl: neurlinr_beta_likelihood(deep_encoder(nl, z), th, beta, 100000*datastd**2)
+beta_likelihood = lambda z, th, beta, nl: neurlinr_beta_likelihood(deep_encoder(nl, z), th, beta, datastd**2)
 grad_beta = lambda z, th, beta, nl : NotImplementedError #neurlinr_beta_gradient(z, th, beta, Siginv, logdetSig)
 #neurlinr_grad_x_loglikelihood(deep_encoder(nl, z), th, datastd**2)
 
@@ -96,13 +95,13 @@ prj_bw = bc.BetaBlackBoxProjector(sampler_w, proj_dim, beta_likelihood, log_like
 #create coreset construction objects
 print('Creating coreset construction objects')
 
-in_batches=True
+in_batches = True
 if in_batches:
-  batch_size=10
-  M = 20 # max num of coreset iterations
+  batch_size = max(10, int(N/400.))
+  M = 100 # max num of coreset iterations
   groups = list(np.split(np.arange(X.shape[0]), range(batch_size, X.shape[0], batch_size)))
   sparsevi = bc.SparseVICoreset(Z, prj_w, opt_itrs=VI_opt_itrs, n_subsample_opt=n_subsample_opt, n_subsample_select=None,
-                              step_sched=SVI_step_sched, wts=np.ones(init_size), idcs=np.arange(init_size), pts=Z_init, groups=groups)
+                              step_sched=SVI_step_sched, wts=np.ones(init_size), idcs=np.arange(init_size), pts=Z_init, groups=groups, initialized=True)
   bcoresvi = bc.BetaCoreset(Z, prj_bw, opt_itrs = VI_opt_itrs, n_subsample_opt = n_subsample_opt, n_subsample_select = None,
                               step_sched = BCORES_step_sched, beta = beta, learn_beta=False, wts=np.ones(init_size), idcs=np.arange(init_size), pts=Z_init, groups=groups)
   unif = bc.UniformSamplingCoreset(Z, wts=np.ones(init_size), idcs=np.arange(init_size), pts=Z_init, groups=groups)
@@ -145,7 +144,7 @@ if alg in ['BPSVI']:
     i+=1
     nl.update_batch(p[-1].astype(np.float32))
     if m%train_nn_freq==0:  # train deep feature extractor with current coreset datapoints
-      nl.optimize(torch.from_numpy(w[-1].astype(np.float32)), torch.from_numpy(p[-1].astype(np.float32)), weight_decay=1., initial_lr=1e-2)
+      nl.optimize(torch.from_numpy(w[-1].astype(np.float32)), torch.from_numpy(p[-1].astype(np.float32)), weight_decay=1., initial_lr=1e-3)
     test_nll, test_performance = nl.test(torch.from_numpy(Z_test))
     nlls[m], rmses[m] = test_nll, test_performance
 else:
@@ -157,11 +156,12 @@ else:
       if algnm=='BCORES': wts, pts, idcs, beta = alg.get()
       else:
         wts, pts, idcs = alg.get()
+      print('points shape : ', pts.shape, wts)
       w.append(wts)
       p.append(pts)
       nl.update_batch(p[-1].astype(np.float32))
       if m%train_nn_freq==0:   # train deep feature extractor with current coreset datapoints
-        nl.optimize(torch.from_numpy(w[-1].astype(np.float32)), torch.from_numpy(p[-1].astype(np.float32)), weight_decay=1., initial_lr=1e-2)
+        nl.optimize(torch.from_numpy(w[-1].astype(np.float32)), torch.from_numpy(p[-1].astype(np.float32)), weight_decay=.1, initial_lr=1e-2)
       test_nll, test_performance = nl.test(torch.from_numpy(Z_test))
       nlls[m], rmses[m] = test_nll, test_performance
     else:
@@ -173,7 +173,7 @@ else:
       nlls[m], rmses[m] = test_nll, test_performance
 
 # Save results
-f = open('results/results_'+dnm+'_'+algnm+'frate_'+str(f_rate)+'beta'+str(beta)+'_'+str(tr)+'.pk', 'wb')
+f = open('results/results_'+dnm+'_'+algnm+'_frate_'+str(f_rate)+'beta'+str(beta)+'_'+str(tr)+'.pk', 'wb')
 res = (w, p, rmses, nlls)
 pk.dump(res, f)
 f.close()

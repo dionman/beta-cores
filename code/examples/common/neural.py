@@ -111,6 +111,7 @@ class NeuralLinear(torch.nn.Module):
       nn.ReLU(),
       nn.Linear(out_features, out_features),
       nn.BatchNorm1d(out_features),
+      nn.ReLU()
       )
     self.linear = linear([out_features, 1])
     self.normalize = normalize
@@ -151,7 +152,6 @@ class NeuralLinear(torch.nn.Module):
     :param kwargs: (dict) Optional additional arguments for optimization
     :return: None
     """
-    print('data : ', wts.shape, pts.shape)
     weights = [v for k, v in self.named_parameters() if k.endswith('weight')]
     other = [v for k, v in self.named_parameters() if k.endswith('bias')]
     optimizer = torch.optim.Adam([
@@ -166,7 +166,6 @@ class NeuralLinear(torch.nn.Module):
         )
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, num_epochs, eta_min=1e-5)
     for epoch in range(num_epochs):
-      scheduler.step()
       losses, performances = [], []
       self.train()
       for i, (w, p) in enumerate(dataloader):
@@ -176,6 +175,7 @@ class NeuralLinear(torch.nn.Module):
         step_loss = -self._compute_log_likelihood(y, y_pred, w).mean()
         step_loss.backward()
         optimizer.step()
+        scheduler.step()
         performance = self._evaluate_performance(y, y_pred)
         losses.append(step_loss.cpu().item())
         performances.append(performance.cpu().item())
@@ -189,7 +189,7 @@ class NeuralLinear(torch.nn.Module):
     if num_points in batch_sizes: return int(num_points / 2)
     else: return int(batch_sizes[np.sum((num_points / 2) > batch_sizes) - 1])
 
-  def test(self, test_data, mode='val', **kwargs):
+  def test(self, test_data, **kwargs):
     """
     Test model
     :param data: (Object) Data to use for testing
@@ -198,7 +198,7 @@ class NeuralLinear(torch.nn.Module):
     """
     print("Testing...")
     test_bsz = len(test_data)
-    losses, performances = self._evaluate(test_data, test_bsz, mode=mode, **kwargs)
+    losses, performances = self._evaluate(test_data, test_bsz, **kwargs)
     print("predictive ll: {:.4f}, rmse: {:.4f}".format(
             -np.mean(losses), np.mean(performances)))
     return np.hstack(losses), np.hstack(performances)
@@ -218,7 +218,7 @@ class NeuralLinear(torch.nn.Module):
     with torch.no_grad():
       dataloader = DataLoader(data, batch_size=batch_size, shuffle=False)
       for p in dataloader:
-        x,y = p[:,:-1],p[:,-1]
+        x, y = p[:,:-1], p[:,-1]
         y_pred = self.forward(x)
         pred_mean, pred_variance = y_pred
         loss = torch.sum(-self.gaussian_log_density(y, pred_mean, pred_variance))
