@@ -73,7 +73,7 @@ def log_likelihood(z, th):
   z = np.atleast_2d(z)
   th = np.atleast_2d(th)
   m = -z.dot(th.T)
-  idcs = m < 500
+  idcs = m < 100
   m[idcs] = -np.log1p(np.exp(m[idcs]))
   m[np.logical_not(idcs)] = -m[np.logical_not(idcs)]
   return m

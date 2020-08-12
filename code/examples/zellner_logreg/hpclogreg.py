@@ -20,12 +20,12 @@ def linearize():
   c = -1
   for beta in [0.9]:
     for tr in range(5): # trial number
-      for nm in ["BPSVI"]: #, "SVI"]: # coreset method
-        for i0 in [0.01, 1.0]:
-          for f_rate in [0]: #30
-            for graddiag in [False]:
+      for nm in ['SVI', 'BCORES']: #["RAND", "SVI", "BCORES"]: # coreset method
+        for i0 in [0.1]:
+          for f_rate in [0, 15]: #30
+            for graddiag in [True]:
               for structured in [False]:
-               for dnm in ["adult"]: #, "phish"]: #, "webspam"]: #, "webspam"]:
+               for dnm in ["webspam"]: #, "phish"]: #, "webspam"]: #, "webspam"]:
                   c += 1
                   args_dict[c] = (tr, nm, dnm, f_rate, beta, i0, graddiag, structured)
   return args_dict
@@ -128,12 +128,12 @@ def get_laplace(wts, Z, mu0, diag=False):
 ## TUNING PARAMETERS ##
 M = 100
 SVI_step_sched = lambda itr : i0/(1.+itr)
-BPSVI_step_sched = lambda m: lambda itr : i0/(1.+itr) # make step schedule potentially dependent on coreset size
+BPSVI_step_sched = lambda m: lambda itr : (i0-0*0.009*m)/(1.+itr) # make step schedule potentially dependent on coreset size
 BCORES_step_sched = lambda itr : i0/(1.+itr)
 
 n_subsample_opt = 200
 n_subsample_select = 1000
-projection_dim = 100 #random projection dimension
+projection_dim = 200 #random projection dimension
 SVI_opt_itrs = 500
 BPSVI_opt_itrs = 500
 BCORES_opt_itrs = 500
@@ -158,7 +158,7 @@ if len(Yt[Yt==1])>0.55*len(Yt) or len(Yt[Yt==1])<0.45*len(Yt): # truncate for ba
          +[i for i, e in enumerate(Yt) if e == -totrunc])
   Xt, Yt = Xt[idcs,:], Yt[idcs]
 Xt, Yt, _, _, _ = std_cov(Xt, Yt, mean_=x_mean, std_=x_std) # standardize covariates for test data
-
+print('test set shape : ', Xt.shape)
 #create the prior
 mu0 = np.zeros(D)
 Sig0 = np.eye(D)
@@ -234,6 +234,18 @@ N_per = 1000
 accs = np.zeros(M+1)
 pll = np.zeros(M+1)
 
+
+def evaluate_per_m(m): # construction in parallel for different coreset sizes used in BPSVI
+  print('evaluating for m=',m)
+  cx, cy = p[m][:, :-1], ls[m].astype(int)
+  cy[cy==-1] = 0
+  sampler_data = {'x': cx, 'y': cy, 'd': cx.shape[1], 'N': cx.shape[0], 'w': w[m]}
+  thd = sampler_data['d']+1
+  fit = sml.sampling(data=sampler_data, iter=N_per*2, chains=1, control={'adapt_delta':0.9, 'max_treedepth':15}, verbose=False)
+  thetas = np.roll(fit.extract(permuted=False)[:, 0, :thd], -1)
+  return compute_accuracy(Xt, Yt, thetas)
+
+
 print('Evaluation')
 if nm=='PRIOR':
   sampler_data = {'x': np.zeros((1,D-1)), 'y': [0], 'd': D, 'N': 1, 'w': [0]}
@@ -244,26 +256,21 @@ if nm=='PRIOR':
     accs[m]= compute_accuracy(Xt, Yt, thetas)
     pll[m]=np.sum(log_likelihood(Yt[:, np.newaxis]*Xt,thetas))
 else:
-  for m in range(M+1):
-    print('evaluating for m=',m)
-    #if nm!='DBPSVI':
-    cx, cy = p[m][:, :-1], ls[m].astype(int)
-    cy[cy==-1] = 0
-    sampler_data = {'x': cx, 'y': cy, 'd': cx.shape[1], 'N': cx.shape[0], 'w': w[m]}
-    thd = sampler_data['d']+1
-    fit = sml.sampling(data=sampler_data, iter=N_per*2, chains=1, control={'adapt_delta':0.9, 'max_treedepth':15}, verbose=False)
-    thetas = np.roll(fit.extract(permuted=False)[:, 0, :thd], -1)
-    #else:
-    #  cx, cy = p[m][:, :-1], ls[m].astype(int)
-    #  cy[cy==-1] = 0
-    #  sampler_data = {'x': cx, 'y': cy, 'd': cx.shape[1], 'N': cx.shape[0], 'w': w[m]}
-    #  thd = sampler_data['d']
-    #  fit = sml1.sampling(data=sampler_data, iter=N_per*2, chains=1, control={'adapt_delta':0.9, 'max_treedepth':15}, verbose=False)
-    #  thetas = np.roll(fit.extract(permuted=False)[:, 0, :thd], -1)
-    #  print('here!')
-    #print('thetas for m=',m, thetas)
-    accs[m] = compute_accuracy(Xt, Yt, thetas)
-    pll[m] = np.sum(log_likelihood(Yt[:, np.newaxis]*Xt, thetas))/float(Xt.shape[0]*thetas.shape[0])
+  pool = Pool(processes=100)
+  accs = pool.map(evaluate_per_m, range(M+1))
+
+  #for m in range(M+1):
+  #  print('evaluating for m=',m)
+  #  cx, cy = p[m][:, :-1], ls[m].astype(int)
+  #  cy[cy==-1] = 0
+  #  print('cy : ', len(cy), sum(cy) )
+  #  sampler_data = {'x': cx, 'y': cy, 'd': cx.shape[1], 'N': cx.shape[0], 'w': w[m]}
+  #  thd = sampler_data['d']+1
+  #  fit = sml.sampling(data=sampler_data, iter=N_per*2, chains=1, control={'adapt_delta':0.9, 'max_treedepth':15}, verbose=False)
+  #  thetas = np.roll(fit.extract(permuted=False)[:, 0, :thd], -1)
+  #  accs[m] = compute_accuracy(Xt, Yt, thetas)
+  #  print('accuracy : ', accs[m])
+  
 print('accuracies : ', accs)
 print('pll : ', pll)
 
