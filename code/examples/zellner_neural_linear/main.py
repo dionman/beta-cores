@@ -60,6 +60,7 @@ i0 = .1 # starting learning rate
 SVI_step_sched = lambda i : i0/(1.+i)
 #BPSVI_step_sched = lambda m: lambda i : i0/(1.+i)
 BCORES_step_sched = lambda i : i0/(1.+i)
+M = 50 # max num of coreset iterations
 
 #Specify priors
 #get empirical mean/std
@@ -97,8 +98,7 @@ print('Creating coreset construction objects')
 
 in_batches = True
 if in_batches:
-  batch_size = max(10, int(N/400.))
-  M = 100 # max num of coreset iterations
+  batch_size = max(20, int(N/200.))
   groups = list(np.split(np.arange(X.shape[0]), range(batch_size, X.shape[0], batch_size)))
   sparsevi = bc.SparseVICoreset(Z, prj_w, opt_itrs=VI_opt_itrs, n_subsample_opt=n_subsample_opt, n_subsample_select=None,
                               step_sched=SVI_step_sched, wts=np.ones(init_size), idcs=np.arange(init_size), pts=Z_init, groups=groups, initialized=True)
@@ -106,7 +106,6 @@ if in_batches:
                               step_sched = BCORES_step_sched, beta = beta, learn_beta=False, wts=np.ones(init_size), idcs=np.arange(init_size), pts=Z_init, groups=groups)
   unif = bc.UniformSamplingCoreset(Z, wts=np.ones(init_size), idcs=np.arange(init_size), pts=Z_init, groups=groups)
 else:
-  M = 400 # max num of coreset iterations
   sparsevi = bc.SparseVICoreset(Z, prj_w, opt_itrs=VI_opt_itrs, n_subsample_opt=n_subsample_opt, n_subsample_select=n_subsample_select,
                               step_sched=SVI_step_sched, wts=np.ones(init_size), idcs=np.arange(init_size), pts=Z_init, groups=None)
 
@@ -156,7 +155,7 @@ else:
       if algnm=='BCORES': wts, pts, idcs, beta = alg.get()
       else:
         wts, pts, idcs = alg.get()
-      print('points shape : ', pts.shape, wts)
+      #print('points shape : ', pts.shape, wts)
       w.append(wts)
       p.append(pts)
       nl.update_batch(p[-1].astype(np.float32))

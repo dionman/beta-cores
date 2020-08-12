@@ -179,9 +179,8 @@ class NeuralLinear(torch.nn.Module):
         performance = self._evaluate_performance(y, y_pred)
         losses.append(step_loss.cpu().item())
         performances.append(performance.cpu().item())
-      if epoch % 100 == 0 or epoch == num_epochs - 1:
-        print('#{} loss: {:.4f}, rmse: {:.4f}'.format(epoch, np.mean(losses), np.mean(performances)))
-        #if epoch==200: exit()
+      #if epoch % 100 == 0 or epoch == num_epochs - 1:
+        #print('#{} loss: {:.4f}, rmse: {:.4f}'.format(epoch, np.mean(losses), np.mean(performances)))
 
   def get_batch_size(self, num_points):
     # computes the closest power of two that is smaller or equal than num_points/2
