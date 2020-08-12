@@ -25,7 +25,6 @@ graddiag=str(sys.argv[7])
 structured=str(sys.argv[8])
 
 plot_0=False # plot baseline for zero corruption
-
 algs = [('BCORES', 'β-Cores', pal[0]), ('SVI', 'SparseVI', pal[4]), ('BPSVI', 'PSVI', pal[7]), ('RAND', 'Uniform', pal[3])] #
 fldr_figs = 'figs'
 if not os.path.exists(fldr_figs):
@@ -54,13 +53,14 @@ else:
   preprocess_plot(fig4, '72pt', False, False)
   figs.append([fig, fig2, fig3, fig4])
 M=101
+#if dnm=='webspam': M=151
 
 for alg in algs:
-  if alg[0]=='BPSVI':
-      trials = [fn for fn in os.listdir(fldr_res) if fn.startswith(dnm+'_'+alg[0]+'_frate_'+str(f_rate)+'_i0_0.1_beta_0.9_graddiag_'+str(graddiag)+'_'+str(structured))]
-  else:
-      trials = [fn for fn in os.listdir(fldr_res) if fn.startswith(dnm+'_'+alg[0]+'_frate_'+str(f_rate)+'_i0_'+str((i0))+'_beta_'+str(beta)+'_graddiag_'+str(graddiag)+'_'+str(structured))]
-  print('trials : ', dnm+'_'+alg[0]+'_frate_'+str(f_rate)+'_i0_'+str(int(i0))+'_beta_'+str(beta)+'_graddiag_'+str(graddiag)+'_'+str(structured))
+  #if alg[0]=='BPSVI':
+  #  trials = [fn for fn in os.listdir(fldr_res) if fn.startswith(dnm+'_'+alg[0]+'_frate_'+str(f_rate)+'_i0_0.1_beta_0.9_graddiag_'+str(graddiag)+'_'+str(structured))]
+  #  print('trials : ', trials)
+  #else:
+  trials = [fn for fn in os.listdir(fldr_res) if fn.startswith(dnm+'_'+alg[0]+'_frate_'+str(f_rate)+'_i0_'+str((i0))+'_beta_'+str(beta)+'_graddiag_'+str(graddiag)+'_'+str(structured))]
   if len(trials) == 0:
     fig.line([], [], color=alg[2], legend_label=alg[1], line_width=10); fig.patch([], [], color=alg[2], legend_label=alg[1], alpha=0.3)
     fig2.line([], [], color=alg[2], legend_label=alg[1], line_width=10); fig2.patch([], [], color=alg[2], legend_label=alg[1], alpha=0.3)
@@ -74,11 +74,11 @@ for alg in algs:
     f = open(os.path.join(fldr_res,fn), 'rb')
     res = pk.load(f) #(w, p, accs, pll)
     f.close()
-    wts = res[0]
-    pts = res[1]
-    accs[tridx] = res[2]
-    plls[tridx]  = -res[3]
-    cszs[tridx, :] = np.array([len(w) for w in wts])
+    wts = res[0][:M]
+    pts = res[1][:M]
+    accs[tridx] = res[2][:M]
+    plls[tridx]  = -res[3][:M]
+    cszs[tridx, :] = np.array([len(w) for w in wts][:M])
 
   csz50 = np.percentile(cszs, 50, axis=0)
   csz25 = np.percentile(cszs, 25, axis=0)
@@ -88,13 +88,9 @@ for alg in algs:
   acc25 = np.percentile(accs, 25, axis=0)
   acc75 = np.percentile(accs, 75, axis=0)
 
-  print(np.mean(accs), np.std(accs))
-
-
   pll50 = np.percentile(plls, 50, axis=0)
   pll25 = np.percentile(plls, 25, axis=0)
   pll75 = np.percentile(plls, 75, axis=0)
-
 
   fig.line(np.arange(acc50.shape[0]), acc50, color=alg[2], legend_label=alg[1], line_width=10)
   fig.line(np.arange(acc25.shape[0]), acc25, color=alg[2], legend_label=alg[1], line_width=10, line_dash='dashed')
@@ -111,50 +107,6 @@ for alg in algs:
     fig4.line(csz50, pll50, color=alg[2], legend_label=alg[1], line_width=10)
     fig4.patch(np.hstack((csz50, csz50[::-1])), np.hstack((pll75, pll25[::-1])), fill_color=alg[2], legend_label=alg[1], alpha=0.3)
     fig4.legend.location='top_left'
-
-
-  if plot_0:
-    trials = [fn for fn in os.listdir(fldr_res) if fn.startswith(dnm+'_'+alg[0]+'_frate_0_i0_'+str(i0)+'_beta_'+str(beta)+'_graddiag_'+str(graddiag)+'_'+str(structured))]
-    accs = np.zeros((len(trials), M))
-    plls = np.zeros((len(trials), M))
-    cszs = np.zeros((len(trials), M))
-    for tridx, fn in enumerate(trials):
-      f = open(os.path.join(fldr_res,fn), 'rb')
-      res = pk.load(f) #(w, p, accs, pll)
-      f.close()
-      wts = res[0]
-      pts = res[1]
-      accs[tridx] = res[2]
-      print(res[3])
-      plls[tridx]  = -res[3]
-      cszs[tridx, :] = np.array([len(w) for w in wts])
-
-    csz50 = np.percentile(cszs, 50, axis=0)
-    csz25 = np.percentile(cszs, 25, axis=0)
-    csz75 = np.percentile(cszs, 75, axis=0)
-
-    acc50 = np.percentile(accs, 50, axis=0)
-    acc25 = np.percentile(accs, 25, axis=0)
-    acc75 = np.percentile(accs, 75, axis=0)
-
-    pll50 = np.percentile(plls, 50, axis=0)
-    pll25 = np.percentile(plls, 25, axis=0)
-    pll75 = np.percentile(plls, 75, axis=0)
-
-    fig.line(np.arange(acc50.shape[0]), acc50, color=alg[2], legend_label=alg[1], line_width=10)
-    fig.line(np.arange(acc25.shape[0]), acc25, color=alg[2], legend_label=alg[1], line_width=10, line_dash='dashed')
-    fig.line(np.arange(acc75.shape[0]), acc75, color=alg[2], legend_label=alg[1], line_width=10, line_dash='dashed')
-
-    fig3.line(np.arange(acc50.shape[0]), pll50, color=alg[2], legend_label=alg[1], line_width=10)
-    fig3.line(np.arange(acc25.shape[0]), pll25, color=alg[2], legend_label=alg[1], line_width=10, line_dash='dashed')
-    fig3.line(np.arange(acc75.shape[0]), pll75, color=alg[2], legend_label=alg[1], line_width=10, line_dash='dashed')
-
-    if alg[0] != 'PRIOR':
-      fig2.line(csz50, acc50, color=alg[2], legend_label=alg[1], line_width=10, line_dash='dashed')
-      fig2.legend.location='top_left'
-      fig4.line(csz50, pll50, color=alg[2], legend_label=alg[1], line_width=10, line_dash='dashed')
-      fig4.legend.location='top_left'
-
 
 for f in [fig, fig3]:
   f.legend.location='top_left'
@@ -179,7 +131,4 @@ fnm = (str(beta)+'_'+str(i0)+'_'+str(f_rate)+'_'+str(graddiag)+'_'+str(structure
 #export_png(fig, filename=os.path.join(fldr_figs, dnm+fnm+"_ACCvsit.png"), height=1500, width=2000)
 export_png(fig2, filename=os.path.join(fldr_figs, dnm+fnm+"_ACCvssz.png"), height=1500, width=2000)
 #export_png(fig3, filename=os.path.join(fldr_figs, dnm+fnm+"_LLvsit.png"), height=1500, width=2000)
-export_png(fig4, filename=os.path.join(fldr_figs, dnm+fnm+"_LLvssz.png"), height=1500, width=2000)
-
-np.savez('results/diagnostics_'+dnm+'_'+fnm, accs=accs, plls=plls)
-#bkp.show(bkl.gridplot(figs))
+#export_png(fig4, filename=os.path.join(fldr_figs, dnm+fnm+"_LLvssz.png"), height=1500, width=2000)
