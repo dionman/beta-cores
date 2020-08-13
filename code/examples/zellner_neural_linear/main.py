@@ -33,7 +33,7 @@ if dnm=='synthetic':
 else:
   X, Y = load_data(dnm, data_dir='../data')
   N = Y.shape[0]  # number of data points
-init_size = 20 #max(20, int(0.01*N))
+init_size = 10 #max(20, int(0.01*N))
 test_size = int(0.1*N)
 
 # Split datasets
@@ -50,7 +50,7 @@ print(X.shape, Y.shape, X_init.shape, Y_init.shape, X_test.shape, Y_test.shape)
 
 # Specify encoder and coreset hyperparameters
 out_features = 30 # dimension of the ouput of the neural encoder used for lin reg
-nl = NeuralLinearTB(Z_init, out_features=out_features, input_mean=input_mean, input_std=input_std, output_mean=output_mean, output_std=output_std)
+nl = NeuralLinearTB(Z_init, out_features=out_features, input_mean=input_mean, input_std=input_std, output_mean=output_mean, output_std=output_std, seed=tr)
 train_nn_freq = 1 # frequency of nn training wrt coreset iterations
 VI_opt_itrs = 1000
 n_subsample_opt = 1000
@@ -132,6 +132,9 @@ def build_per_m(m): # construction in parallel for different coreset sizes used 
   print('built for m=',m)
   return alg.get()
 
+m=0
+test_nll, test_performance = nl.test(torch.from_numpy(Z_test))
+nlls[m], rmses[m] = test_nll, test_performance
 if alg in ['BPSVI']:
   from multiprocessing import Pool
   pool = Pool(processes=10)
