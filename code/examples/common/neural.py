@@ -120,7 +120,7 @@ class NeuralLinear(torch.nn.Module):
       nn.ReLU()
       )
     self.linear = linear([out_features, 1])
-    self.normalize = normalize        
+    self.normalize = normalize
     if self.normalize:
       self.output_mean = torch.FloatTensor([output_mean])
       self.output_std = torch.FloatTensor([output_std])
@@ -295,7 +295,7 @@ class NeuralLinearTB(NeuralLinear):
     super().__init__(data_init, linear=FullBayesianRegressionDense, out_features=out_features, **kwargs)
     torch.manual_seed(seed)
     np.random.seed(42)
-    
+
   def _compute_log_likelihood(self, y, y_pred, w):
     pred_mean, pred_variance = y_pred
     return torch.sum(w*students_t_log_density(y, pred_mean, pred_variance, nu=self.linear.nu), dim=0)
