@@ -16,18 +16,15 @@ def load_data(name, data_dir):
     data.drop([c for c in list(data.columns) if '_is_' in c], axis=1, inplace=True)
     data = data.iloc[1:,2:].to_numpy()
     min_max_scaler = MinMaxScaler()
-    X =  data[:, :-1]
+    X = data[:, :-1]
     X = min_max_scaler.fit_transform(data[:, :-1])
-    Y =  data[:, -1:]
+    Y = data[:, -1:]
     return (X, Y)
   elif name in ['year']:
     data = np.genfromtxt('{}/{}.txt'.format(data_dir, name), delimiter=',')
   else:
     raise ValueError('Unsupported dataset: {}'.format(data_dir, name))
-  if name in ['energy', 'naval']:  # dataset has 2 response values
-    X = data[:, :-2]
-    Y = data[:, -2:-1]  # pick first response value
-  elif name in ['boston']:
+  if name in ['boston']:
     X = data['data']
     Y = data['target'][:, np.newaxis]
   else:
@@ -48,16 +45,16 @@ def preprocessing(Xtrain, ytrain, Xinit, yinit, Xtest, ytest):
   Xtest = (Xtest - input_mean) / input_std
   return Xtrain, ytrain, Xinit, yinit, Xtest, ytest, input_mean, input_std, output_mean, output_std
 
-def perturb(X_train, y_train, noise_x=(0,5), f_rate=0.1, structured=False, mean_val=0.1, std_val=1., theta_val=-1.):
+def perturb(X_train, y_train, noise_x=(1.,10.), f_rate=0.1, structured=False, mean=0.1, std=1., theta_val=-1.):
   N, D = X_train.shape
   o = np.int(N*f_rate)
   idxx = np.random.choice(N, size=o)
   if not structured: # random noise/mislabeling in input/output space
     idxy = np.random.choice(N, size=o)
-    idcs =  np.random.choice(D,int(D/2.),replace=False)
+    idcs =  np.random.choice(D, int(D/2.), replace=False)
     for i in idcs: # replace half of the features with gaussian noise
       X_train[idxx,i] = np.random.normal(noise_x[0], noise_x[1], size=o)
-    if o>0: y_train[idxy] = np.random.normal(noise_x[0], noise_x[1], size=o)[:,np.newaxis]
+    if o>0: y_train[idxy] = np.random.normal(0., 5., size=o)[:,np.newaxis]
   else: # structured perturbation for desirable adversarial outcome
     NotImplementedError
   outidx = np.unique(np.concatenate([idxx, idxy]))
@@ -92,7 +89,6 @@ def neurlinr_beta_likelihood(z, th, beta, sigsq):
   vals = 1./(2*np.pi*sigsq)**(beta/2.)*(-(beta+1.)/beta*np.exp(-beta/(2.*sigsq)*(y[:,np.newaxis]**2 - 2*XST*y[:,np.newaxis] + XST**2))
                                         +1./np.sqrt(1.+beta))
   return vals
-
 
 def neurlinr_beta_gradient(z, th, beta, Siginv, logdetSig):
   pass
