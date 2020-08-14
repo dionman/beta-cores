@@ -13,16 +13,18 @@ def linearize():
   c = -1
   for beta in [0.9]:
     for tr in range(5): # trial number
-      for nm in ["RAND", "SVI", "BCORES"]: # coreset method
+      for nm in ["SVI", "RAND", "BCORES"]: # coreset method
         for i0 in [0.1, 1., 10.]:
           for f_rate in [0, 15]: #30
-            for dnm in ["boston", "year", "news"]: #, "phish"]: #, "webspam"]: #, "webspam"]:
+            for dnm in ["year", "news"]: #, "phish"]: #, "webspam"]: #, "webspam"]:
               c += 1
               args_dict[c] = (tr, nm, dnm, f_rate, beta, i0)
   return args_dict
 
 mapping = linearize()
-tr, nm, dnm, f_rate, beta, i0, graddiag, structured = mapping[int(sys.argv[1])]
+#tr, algnm, dnm, f_rate, beta, i0 = mapping[int(sys.argv[1])]
+tr, algnm, dnm, f_rate, beta, i0 = mapping[0]
+
 
 # randomize datapoints order
 def unison_shuffled_copies(a, b):
@@ -31,11 +33,6 @@ def unison_shuffled_copies(a, b):
   return a[p], b[p]
 
 # Parse input arguments
-dnm = sys.argv[1]
-algnm = sys.argv[2]
-tr = sys.argv[3]
-f_rate = float(sys.argv[4])
-beta = float(sys.argv[5])
 np.random.seed(int(tr))
 #Specify results folder
 results_fldr = 'results'
@@ -47,7 +44,7 @@ if dnm=='synthetic':
   N = 3000  # number of data points
   X, Y = build_synthetic_dataset(N)
 else:
-  X, Y = load_data(dnm, data_dir='../data')
+  X, Y = load_data(dnm, data_dir='/home/dm754/rds/hpc-work/zellner_neural/data')
   N = Y.shape[0]  # number of data points
 init_size = 10 #max(20, int(0.01*N))
 test_size = int(0.1*N)
@@ -55,17 +52,18 @@ test_size = int(0.1*N)
 # Split datasets
 X, Y = unison_shuffled_copies(X.astype(np.float32), Y.astype(np.float32))
 X_init, Y_init, X, Y, X_test, Y_test=(
-          X[:init_size,:], Y[:init_size], X[init_size:-test_size,:],
-          Y[init_size:-test_size], X[-test_size:,:], Y[-test_size:])
+         X[:init_size,:], Y[:init_size], X[init_size:-test_size,:],
+         Y[init_size:-test_size], X[-test_size:,:], Y[-test_size:])
 X, Y, X_init, Y_init, X_test, Y_test, input_mean, input_std, output_mean, output_std = preprocessing(X, Y, X_init, Y_init, X_test, Y_test)
-X, Y = perturb(X, Y, f_rate=f_rate)# corrupt datapoints
+X, Y = perturb(X, Y, f_rate=0.01*f_rate)# corrupt datapoints
 Z_init = np.hstack((X_init, Y_init)).astype(np.float32)
 Z = np.hstack((X, Y)).astype(np.float32)
 Z_test = np.hstack((X_test, Y_test)).astype(np.float32)
 
+
 # Specify encoder and coreset hyperparameters
 out_features = 30 # dimension of the ouput of the neural encoder used for lin reg
-nl = NeuralLinearTB(Z_init, out_features=out_features, input_mean=input_mean, input_std=input_std, output_mean=output_mean, output_std=output_std, seed=tr)
+nl = NeuralLinear(Z_init, out_features=out_features, input_mean=input_mean, input_std=input_std, output_mean=output_mean, output_std=output_std, seed=tr)
 train_nn_freq = 1 # frequency of nn training wrt coreset iterations
 VI_opt_itrs = 1000
 n_subsample_opt = 1000
@@ -108,6 +106,7 @@ prj_bw = bc.BetaBlackBoxProjector(sampler_w, proj_dim, beta_likelihood, log_like
 
 #create coreset construction objects
 print('Creating coreset construction objects')
+
 
 in_batches = True
 if in_batches:
@@ -169,8 +168,7 @@ else:
       alg.build(1, N)
       #store weights
       if algnm=='BCORES': wts, pts, idcs, beta = alg.get()
-      else:
-        wts, pts, idcs = alg.get()
+      else: wts, pts, idcs = alg.get()
       w.append(wts)
       p.append(pts)
       nl.update_batch(p[-1].astype(np.float32))
@@ -191,3 +189,4 @@ f = open('results/results_'+dnm+'_'+algnm+'_frate_'+str(f_rate)+'_beta_'+str(bet
 res = (w, p, rmses, nlls)
 pk.dump(res, f)
 f.close()
+

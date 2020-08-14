@@ -7,9 +7,9 @@
 #SBATCH -A COMPUTERLAB-SL2-CPU
 #! Output filename:
 #! %A means slurm job ID and %a means array index
-#SBATCH --output=/home/dm754/rds/hpc-work/zellner_logreg/outputs/%A_%a.out
+#SBATCH --output=/home/dm754/rds/hpc-work/zellner_neural/outputs/%A_%a.out
 #! Errors filename:
-#SBATCH --error=/home/dm754/rds/hpc-work/zellner_logreg/outputs/%A_%a.err
+#SBATCH --error=/home/dm754/rds/hpc-work/zellner_neural/outputs/%A_%a.err
 
 #! How many whole nodes should be allocated?
 #SBATCH --nodes=1
@@ -19,7 +19,7 @@
 #! How many many cores will be allocated per task? (for single core jobs always leave this at 1)
 #SBATCH --cpus-per-task=1
 #! How much wallclock time will be required?
-#SBATCH --time=00:50:00
+#SBATCH --time=02:50:00
 #! What types of email messages do you wish to receive?
 #SBATCH --mail-type=FAIL
 #! Uncomment this to prevent the job from being requeued (e.g. if
@@ -27,7 +27,7 @@
 ##SBATCH --no-requeue
 #! Submit a job array with index values between 0 and 31
 #! NOTE: This must be a range, not a single number (i.e. specifying '32' here would only run one job, with index 32)
-#SBATCH --array=0-279
+#SBATCH --array=0-179
 
 #! For 6GB per CPU, set "-p skylake"; for 12GB per CPU, set "-p skylake-himem":
 #SBATCH -p skylake-himem

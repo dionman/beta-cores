@@ -21,7 +21,7 @@ def load_data(name, data_dir):
     Y =  data[:, -1:]
     return (X, Y)
   elif name in ['year']:
-    data = np.loadtxt('{}/{}.txt'.format(data_dir, name), delimiter=',')
+    data = np.genfromtxt('{}/{}.txt'.format(data_dir, name), delimiter=',')
   else:
     raise ValueError('Unsupported dataset: {}'.format(data_dir, name))
   if name in ['energy', 'naval']:  # dataset has 2 response values
