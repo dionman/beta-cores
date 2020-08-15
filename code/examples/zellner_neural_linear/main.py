@@ -11,12 +11,12 @@ from neural import *
 def linearize():
   args_dict = dict()
   c = -1
-  for beta in [0.9]:
-    for tr in range(5): # trial number
+  for beta in [0.3]:
+    for tr in range(30): # trial number
       for nm in ["RAND", "BCORES", "SVI"]: # coreset method
-        for i0 in [.05]:
-          for f_rate in [0, 15]: #30
-            for dnm in ["boston", "year"]:
+        for i0 in [.1, .2]:
+          for f_rate in [30, 0]:
+            for dnm in ["boston"]:
               c += 1
               args_dict[c] = (tr, nm, dnm, f_rate, beta, i0)
   return args_dict
@@ -47,15 +47,19 @@ else:
   X, Y = load_data(dnm, data_dir='/home/dm754/rds/hpc-work/zellner_neural/data')
   N = Y.shape[0]  # number of data points
 if dnm=='boston':
-  init_size = 20 # max(20, int(0.01*N))
-  batch_size = max(10, int(N/200.))
-  out_features = 10 # dimension of the ouput of the neural encoder used for lin reg
+  init_size = 10 
+  batch_size = 10 #max(20, int(N/200.))
+  out_features = 30 # dimension of the ouput of the neural encoder used for lin reg
+  weight_decay = 1.
+  initial_lr = 1e-2
 elif dnm=='year':
-  init_size = 500
+  init_size = 200
   batch_size = 100
   out_features = 100
+  weight_decay = 3.
+  initial_lr = 1e-2
 test_size = int(0.1*N)
-tss = min(1000, test_size) # test set sample size
+tss = min(500, test_size) # test set sample size
 
 # Split datasets
 X, Y = unison_shuffled_copies(X.astype(np.float32), Y.astype(np.float32))
@@ -69,7 +73,8 @@ X, Y, X_init, Y_init, X_test, Y_test, input_mean, input_std, output_mean, output
 datastd = Y.std()
 datamn = Y.mean()
 
-X, Y = perturb(X, Y, f_rate=0.01*f_rate) # corrupt datapoints
+groups = list(np.split(np.arange(X.shape[0]), range(batch_size, X.shape[0], batch_size)))
+X, Y = perturb(X, Y, f_rate=0.01*f_rate, groups=groups) # corrupt datapoints
 Z_init = np.hstack((X_init, Y_init)).astype(np.float32)
 Z = np.hstack((X, Y)).astype(np.float32)
 Z_test = np.hstack((X_test, Y_test)).astype(np.float32)
@@ -80,7 +85,7 @@ train_nn_freq = 1 # frequency of nn training wrt coreset iterations
 VI_opt_itrs = 1000
 n_subsample_opt = 1000
 n_subsample_select = 10
-proj_dim = 200
+proj_dim = 100
 SVI_step_sched = lambda i : i0/(1.+i)
 #BPSVI_step_sched = lambda m: lambda i : i0/(1.+i)
 BCORES_step_sched = lambda i : i0/(1.+i)
@@ -116,15 +121,13 @@ print('Creating coreset construction objects')
 
 in_batches = True
 if in_batches:
-  groups = list(np.split(np.arange(X.shape[0]), range(batch_size, X.shape[0], batch_size)))
   sparsevi = bc.SparseVICoreset(Z, prj_w, opt_itrs=VI_opt_itrs, n_subsample_opt=n_subsample_opt, n_subsample_select=None,
-                              step_sched=SVI_step_sched, wts=np.ones(init_size), idcs=np.arange(init_size), pts=Z_init, groups=groups, initialized=True, enforce_new=False)
+                              step_sched=SVI_step_sched, wts=np.ones(init_size), idcs=1e7+np.arange(init_size), pts=Z_init, groups=groups, initialized=True, enforce_new=False)
   bcoresvi = bc.BetaCoreset(Z, prj_bw, opt_itrs=VI_opt_itrs, n_subsample_opt=n_subsample_opt, n_subsample_select=None,
-                              step_sched=BCORES_step_sched, beta=beta, learn_beta=False, wts=np.ones(init_size), idcs=np.arange(init_size), pts=Z_init, groups=groups)
-  unif = bc.UniformSamplingCoreset(Z, wts=np.ones(init_size), idcs=np.arange(init_size), pts=Z_init, groups=groups)
+                              step_sched=BCORES_step_sched, beta=beta, learn_beta=False, wts=np.ones(init_size), idcs=1e7+np.arange(init_size), pts=Z_init, groups=groups)
+  unif = bc.UniformSamplingCoreset(Z, wts=np.ones(init_size), idcs=1e7+np.arange(init_size), pts=Z_init, groups=groups)
 else:
-  sparsevi = bc.SparseVICoreset(Z, prj_w, opt_itrs=VI_opt_itrs, n_subsample_opt=n_subsample_opt, n_subsample_select=n_subsample_select,
-                              step_sched=SVI_step_sched, wts=np.ones(init_size), idcs=np.arange(init_size), pts=Z_init, groups=None)
+  raise NotImplementedError("Supported only batch data acquisition")
 
 algs = {'BCORES': bcoresvi,
         #'BPSVI': bpsvi,
@@ -159,7 +162,7 @@ if alg in ['BPSVI']:
     i+=1
     nl.update_batch(p[-1].astype(np.float32))
     if m%train_nn_freq==0:  # train deep feature extractor with current coreset data$
-      nl.optimize(torch.from_numpy(w[-1].astype(np.float32)), torch.from_numpy(p[-1].astype(np.float32)), weight_decay=1., initial_lr=1e-3)
+      nl.optimize(torch.from_numpy(w[-1].astype(np.float32)), torch.from_numpy(p[-1].astype(np.float32)), weight_decay=weight_decay, initial_lr=initial_lr)
     test_nll, test_performance = nl.test(torch.from_numpy(Z_test[np.random.choice(Z_test.shape[0], tss, replace=False), :]))
     nlls[m], rmses[m] = test_nll, test_performance
 else:
@@ -173,9 +176,9 @@ else:
       w.append(wts)
       p.append(pts)
       nl.update_batch(p[-1].astype(np.float32))
-      print('points shape : ', pts.shape)
+      print('points shape : ', pts.shape, idcs[init_size:])
       if m%train_nn_freq==0:   # train deep feature extractor with current coreset d$
-        nl.optimize(torch.from_numpy(w[-1].astype(np.float32)), torch.from_numpy(p[-1].astype(np.float32)), weight_decay=.1, initial_lr=1e-2)
+        nl.optimize(torch.from_numpy(w[-1].astype(np.float32)), torch.from_numpy(p[-1].astype(np.float32)), weight_decay=weight_decay, initial_lr=initial_lr)
       test_nll, test_performance = nl.test(torch.from_numpy(Z_test[np.random.choice(Z_test.shape[0], tss, replace=False), :]))
       nlls[m], rmses[m] = test_nll, test_performance
     else:

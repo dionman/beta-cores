@@ -45,7 +45,25 @@ def preprocessing(Xtrain, ytrain, Xinit, yinit, Xtest, ytest):
   Xtest = (Xtest - input_mean) / input_std
   return Xtrain, ytrain, Xinit, yinit, Xtest, ytest, input_mean, input_std, output_mean, output_std
 
-def perturb(X_train, y_train, noise_x=(1.,10.), f_rate=0.1, structured=False, mean=0.1, std=1., theta_val=-1.):
+def perturb(X_train, y_train, noise_x=(1.,1.), f_rate=0.1, groups=[], structured=False, mean=0.1, std=1., theta_val=-1.):
+  N, D = X_train.shape
+  lg = len(groups)
+  o = np.int(lg*f_rate)
+  idxgroups = np.random.choice(range(lg), size=o)
+  if f_rate>0:
+    if not structured: # random noise/mislabeling in input/output space
+      flatten = lambda l: [item for sublist in l for item in sublist]
+      idxy = flatten([np.random.choice(groups[g], size=np.int(len(groups[g])*0.7), replace=False) for g in idxgroups])
+      print('corrupted datapoints per group : ', idxy)
+      idcs =  np.random.choice(D, int(D/2.), replace=False)
+      for i in idcs: # replace half of the features with gaussian noise
+        X_train[idxy,i] = np.random.normal(noise_x[0], noise_x[1], size=len(idxy))
+      if o>0: y_train[idxy] = np.random.normal(10., 0.5, size=len(idxy))[:,np.newaxis]
+    else: # structured perturbation for desirable adversarial outcome
+      NotImplementedError
+  return X_train, y_train
+
+def perturb_old(X_train, y_train, noise_x=(1.,10.), f_rate=0.1, structured=False, mean=0.1, std=1., theta_val=-1.):
   N, D = X_train.shape
   o = np.int(N*f_rate)
   idxx = np.random.choice(N, size=o)
@@ -57,7 +75,6 @@ def perturb(X_train, y_train, noise_x=(1.,10.), f_rate=0.1, structured=False, me
     if o>0: y_train[idxy] = np.random.normal(0., 5., size=o)[:,np.newaxis]
   else: # structured perturbation for desirable adversarial outcome
     NotImplementedError
-  outidx = np.unique(np.concatenate([idxx, idxy]))
   return X_train, y_train
 
 def build_synthetic_dataset(N=2000, noise_std=0.1, D=40):
