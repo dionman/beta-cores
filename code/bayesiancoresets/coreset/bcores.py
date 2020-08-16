@@ -39,7 +39,7 @@ class BetaCoreset(Coreset):
     self.ll_projector.update(w, p)
     #construct a tangent space
     # component of full dataset (kl-divergence)
-    if n_subsample is None:
+    if n_subsample is None and self.groups is None:
       sub_idcs = None
       vecs = self.ll_projector.project_f(self.data, beta)
       sum_scaling = 1.
@@ -49,11 +49,11 @@ class BetaCoreset(Coreset):
       sub_idcs = flatten([self.groups[idx] for idx in group_idcs])
       vecs = np.array([np.sum(self.ll_projector.project_f(self.data[idcs,:], beta), axis=0) for idcs in group_idcs_lst])
       sum_scaling = 1.
-    elif self.groups is None:
+    elif self.groups is None and self.subsample :
       sub_idcs = np.random.randint(self.data.shape[0], size=n_subsample)
       vecs = self.ll_projector.project_f(self.data[sub_idcs], beta)
       sum_scaling = self.data.shape[0]/n_subsample
-    elif self.groups:
+    elif self.groups and self.subsample:
       group_idcs = np.random.randint(len(self.groups), size=n_subsample)
       group_idcs_lst = [self.groups[i] for i in group_idcs]
       sub_idcs = flatten([self.groups[idx] for idx in group_idcs])
