@@ -49,7 +49,7 @@ class BetaCoreset(Coreset):
       sub_idcs = flatten([self.groups[idx] for idx in group_idcs])
       vecs = np.array([np.sum(self.ll_projector.project_f(self.data[idcs,:], beta), axis=0) for idcs in group_idcs_lst])
       sum_scaling = 1.
-    elif n_subsample and self.groups is None:
+    elif n_subsample and (self.groups is None or select==False):
       sub_idcs = np.random.randint(self.data.shape[0], size=n_subsample)
       vecs = self.ll_projector.project_f(self.data[sub_idcs], beta)
       sum_scaling = self.data.shape[0]/n_subsample

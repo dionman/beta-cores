@@ -12,7 +12,7 @@ def linearize():
   args_dict = dict()
   c = -1
   for beta in [0.2]:
-    for tr in range(30): # trial number
+    for tr in range(10): # trial number
       for nm in ["BCORES", "SVI"]: # coreset method
         for i0 in [.1]:
           for f_rate in [0, 30]:
@@ -86,13 +86,13 @@ groups = list(np.split(np.arange(X.shape[0]), range(batch_size, X.shape[0], batc
 X, Y = perturb(X, Y, f_rate=0.01*f_rate, groups=groups) # corrupt datapoints
 Z_init = np.hstack((X_init, Y_init)).astype(np.float32)
 Z = np.hstack((X, Y)).astype(np.float32)
-Z_test = np.hstack((X_test, Y_test)).astype(np.float32)
+Z_test = np.hstack((X_test, Y_test)).astype(np.float32)[:1000,:]
 
 # Specify encoder and coreset hyperparameters
 nl = NeuralLinear(Z_init, out_features=out_features, input_mean=input_mean, input_std=input_std, output_mean=output_mean, output_std=output_std, seed=tr)
 train_nn_freq = 1 # frequency of nn training wrt coreset iterations
 VI_opt_itrs = 500
-n_subsample_opt = 500
+n_subsample_opt = 1000
 proj_dim = 100
 SVI_step_sched = lambda i : i0/(1.+i)
 #BPSVI_step_sched = lambda m: lambda i : i0/(1.+i)
@@ -127,7 +127,7 @@ def sampler_w(n, wts, pts):
       wts = np.zeros(1)
       pts = np.zeros((1, Z.shape[1]))
   sigsq = datastd**2
-  z=deep_encoder(nl, pts)
+  z = deep_encoder(nl, pts)
   X = z[:, :-1]
   Y = z[:, -1]
   Sigp = np.linalg.inv(Sig0inv + (wts[:, np.newaxis]*X).T.dot(X)/sigsq)
