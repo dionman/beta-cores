@@ -11,19 +11,19 @@ from neural import *
 def linearize():
   args_dict = dict()
   c = -1
-  for beta in [0.3, 0.6]:
+  for beta in [0.2]:
     for tr in range(30): # trial number
       for nm in ["BCORES", "RAND", "SVI"]: # coreset method
         for i0 in [.1]:
           for f_rate in [0, 30]:
-            for dnm in ["boston"]: #, "year", "prices2018"]:
+            for dnm in ["year"]: #, "prices2018"]:
               c += 1
               args_dict[c] = (tr, nm, dnm, f_rate, beta, i0)
   return args_dict
 
 mapping = linearize()
-tr, algnm, dnm, f_rate, beta, i0 = mapping[int(sys.argv[1])]
-#tr, algnm, dnm, f_rate, beta, i0 = mapping[0]
+#tr, algnm, dnm, f_rate, beta, i0 = mapping[int(sys.argv[1])]
+tr, algnm, dnm, f_rate, beta, i0 = mapping[0]
 
 # randomize datapoints order
 def unison_shuffled_copies(a, b):
