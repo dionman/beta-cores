@@ -11,7 +11,7 @@ from neural import *
 def linearize():
   args_dict = dict()
   c = -1
-  for beta in [0.1, 0.2]:
+  for beta in [0.3, 0.6]:
     for tr in range(30): # trial number
       for nm in ["BCORES", "RAND", "SVI"]: # coreset method
         for i0 in [.1]:
@@ -22,8 +22,8 @@ def linearize():
   return args_dict
 
 mapping = linearize()
-#tr, algnm, dnm, f_rate, beta, i0 = mapping[int(sys.argv[1])]
-tr, algnm, dnm, f_rate, beta, i0 = mapping[0]
+tr, algnm, dnm, f_rate, beta, i0 = mapping[int(sys.argv[1])]
+#tr, algnm, dnm, f_rate, beta, i0 = mapping[0]
 
 # randomize datapoints order
 def unison_shuffled_copies(a, b):
