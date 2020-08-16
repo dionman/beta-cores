@@ -76,7 +76,10 @@ class SparseVICoreset(Coreset):
       vecs, sum_scaling, sub_idcs, corevecs = self._get_projection(self.n_subsample_select, self.wts, self.pts, select=True)
       groupvecs = np.asarray([vecs[idx,:].sum(axis=0) for idx in self.groups])
       #compute the residual error
-      resid = sum_scaling*groupvecs.sum(axis=0) - self.wts.dot(corevecs)
+      if self.n_subsample_select is None:
+        resid = groupvecs.sum(axis=0) - self.wts.dot(corevecs)
+      else:
+        resid = self.subsample_select/len(self.groups)*groupvecs.sum(axis=0) - self.wts.dot(corevecs)
       #compute the correlations for the new subsample
       corrs = groupvecs.dot(resid) / np.sqrt((groupvecs**2).sum(axis=1)) / groupvecs.shape[1] #up to a constant; good enough for argmax
       #compute the correlations for the coreset pts (use fabs because we can decrease the weight of these)

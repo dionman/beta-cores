@@ -11,12 +11,12 @@ from neural import *
 def linearize():
   args_dict = dict()
   c = -1
-  for beta in [0.3]:
+  for beta in [0.1, 0.2]:
     for tr in range(30): # trial number
       for nm in ["RAND", "BCORES", "SVI"]: # coreset method
-        for i0 in [.1, .2]:
+        for i0 in [.1]:
           for f_rate in [30, 0]:
-            for dnm in ["boston"]:
+            for dnm in ["boston", "year"]:
               c += 1
               args_dict[c] = (tr, nm, dnm, f_rate, beta, i0)
   return args_dict
@@ -48,8 +48,8 @@ else:
   N = Y.shape[0]  # number of data points
 if dnm=='boston':
   init_size = 10 
-  batch_size = 10 #max(20, int(N/200.))
-  out_features = 30 # dimension of the ouput of the neural encoder used for lin reg
+  batch_size = 20 
+  out_features = 50 # dimension of the ouput of the neural encoder used for lin reg
   weight_decay = 1.
   initial_lr = 1e-2
 elif dnm=='year':
@@ -124,7 +124,7 @@ if in_batches:
   sparsevi = bc.SparseVICoreset(Z, prj_w, opt_itrs=VI_opt_itrs, n_subsample_opt=n_subsample_opt, n_subsample_select=None,
                               step_sched=SVI_step_sched, wts=np.ones(init_size), idcs=1e7+np.arange(init_size), pts=Z_init, groups=groups, initialized=True, enforce_new=False)
   bcoresvi = bc.BetaCoreset(Z, prj_bw, opt_itrs=VI_opt_itrs, n_subsample_opt=n_subsample_opt, n_subsample_select=None,
-                              step_sched=BCORES_step_sched, beta=beta, learn_beta=False, wts=np.ones(init_size), idcs=1e7+np.arange(init_size), pts=Z_init, groups=groups)
+                              step_sched=BCORES_step_sched, beta=beta, learn_beta=False, wts=np.ones(init_size), idcs=1e7+np.arange(init_size), pts=Z_init, groups=groups, initialized=True)
   unif = bc.UniformSamplingCoreset(Z, wts=np.ones(init_size), idcs=1e7+np.arange(init_size), pts=Z_init, groups=groups)
 else:
   raise NotImplementedError("Supported only batch data acquisition")
