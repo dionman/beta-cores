@@ -36,9 +36,15 @@ class SparseVICoreset(Coreset):
     #update the projector
     self.ll_projector.update(w, p)
     #construct a tangent space
-    if n_subsample is None:
+    if n_subsample is None and self.groups is None:
       sub_idcs = None
       vecs = self.ll_projector.project(self.data)
+      sum_scaling = 1.
+    elif n_subsample is None and self.groups:
+      group_idcs = list(range(len(self.groups)))
+      group_idcs_lst = [self.groups[i] for i in group_idcs]
+      sub_idcs = flatten([self.groups[idx] for idx in group_idcs])
+      vecs = np.array([np.sum(self.ll_projector.project(self.data[idcs,:]), axis=0) for idcs in group_idcs_lst])
       sum_scaling = 1.
     elif self.groups is None:
       sub_idcs = np.random.randint(self.data.shape[0], size=n_subsample)
@@ -56,7 +62,9 @@ class SparseVICoreset(Coreset):
       corevecs = np.zeros((0, vecs.shape[1]))
     if self.groups is None and select:
       return vecs[~np.all(vecs == 0., axis=1)], sum_scaling, sub_idcs, corevecs
-    elif select:
+    elif select and not n_subsample:
+      return vecs, sum_scaling, sub_idcs, None, corevecs
+    elif select and n_subsample:
       return vecs, sum_scaling, sub_idcs, group_idcs, corevecs
     else:
       return vecs, sum_scaling, sub_idcs, corevecs
@@ -84,6 +92,7 @@ class SparseVICoreset(Coreset):
           self.pts[-1] = self.data[f]
     else: # add new group to the coreset
       groupvecs, sum_scaling, sub_idcs, group_idcs, corevecs = self._get_projection(self.n_subsample_select, self.wts, self.pts, select=True)
+      print('shapes : ', groupvecs.shape, corevecs.shape)
       if self.n_subsample_select is None:
         resid = groupvecs.sum(axis=0) - self.wts.dot(corevecs)
       else:
@@ -102,6 +111,7 @@ class SparseVICoreset(Coreset):
       if corecorrs.size == 0 or corrs.max() > maxcorecors:
         if self.n_subsample_select is None:
           f = np.argmax(corrs)
+          print(corrs.shape, f, len(self.groups))
         else:
           f = group_idcs[np.argmax(corrs)] if sub_idcs is not None else np.argmax(corrs)
         if f not in self.selected_groups:
