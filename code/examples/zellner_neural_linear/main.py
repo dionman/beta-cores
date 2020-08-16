@@ -13,17 +13,17 @@ def linearize():
   c = -1
   for beta in [0.1, 0.2]:
     for tr in range(30): # trial number
-      for nm in ["RAND", "BCORES", "SVI"]: # coreset method
+      for nm in ["BCORES", "RAND", "SVI"]: # coreset method
         for i0 in [.1]:
-          for f_rate in [30, 0]:
-            for dnm in ["boston", "year"]:
+          for f_rate in [0, 30]:
+            for dnm in ["boston"]: #, "year", "prices2018"]:
               c += 1
               args_dict[c] = (tr, nm, dnm, f_rate, beta, i0)
   return args_dict
 
 mapping = linearize()
-tr, algnm, dnm, f_rate, beta, i0 = mapping[int(sys.argv[1])]
-#tr, algnm, dnm, f_rate, beta, i0 = mapping[0]
+#tr, algnm, dnm, f_rate, beta, i0 = mapping[int(sys.argv[1])]
+tr, algnm, dnm, f_rate, beta, i0 = mapping[0]
 
 # randomize datapoints order
 def unison_shuffled_copies(a, b):
@@ -47,17 +47,26 @@ else:
   X, Y = load_data(dnm, data_dir='/home/dm754/rds/hpc-work/zellner_neural/data')
   N = Y.shape[0]  # number of data points
 if dnm=='boston':
-  init_size = 10 
-  batch_size = 20 
-  out_features = 50 # dimension of the ouput of the neural encoder used for lin reg
+  init_size = 10
+  batch_size = 20
+  out_features = 20 # dimension of the ouput of the neural encoder used for lin reg
   weight_decay = 1.
   initial_lr = 1e-2
+  n_subsample_select = None
 elif dnm=='year':
   init_size = 200
   batch_size = 100
   out_features = 100
   weight_decay = 3.
   initial_lr = 1e-2
+  n_subsample_select = 100
+elif dnm=='prices2018':
+  init_size = 200
+  batch_size = 100
+  out_features = 5
+  weight_decay = 1.
+  initial_lr = 1e-2
+  n_subsample_select = 100
 test_size = int(0.1*N)
 tss = min(500, test_size) # test set sample size
 
@@ -84,7 +93,6 @@ nl = NeuralLinear(Z_init, out_features=out_features, input_mean=input_mean, inpu
 train_nn_freq = 1 # frequency of nn training wrt coreset iterations
 VI_opt_itrs = 1000
 n_subsample_opt = 1000
-n_subsample_select = 10
 proj_dim = 100
 SVI_step_sched = lambda i : i0/(1.+i)
 #BPSVI_step_sched = lambda m: lambda i : i0/(1.+i)
@@ -106,12 +114,26 @@ beta_likelihood = lambda pts, th, beta, nl: neurlinr_beta_likelihood(deep_encode
 grad_beta = lambda pts, th, beta, nl : NotImplementedError
 
 print('Creating black box projector for sampling from coreset posterior')
+'''
 def sampler_w(n, wts, pts):
   if pts.shape[0] == 0:
     wts = np.zeros(1)
     pts = np.zeros((1, Z.shape[1]))
   muw, LSigw, LSigwInv = weighted_post(mu0, Sig0inv, datastd**2, deep_encoder(nl, pts), wts)
   return muw + np.random.randn(n, muw.shape[0]).dot(LSigw.T)
+'''
+def sampler_w(n, wts, pts):
+  if pts.shape[0] == 0:
+      wts = np.zeros(1)
+      pts = np.zeros((1, Z.shape[1]))
+  sigsq = datastd**2
+  z=deep_encoder(nl, pts)
+  X = z[:, :-1]
+  Y = z[:, -1]
+  Sigp = np.linalg.inv(Sig0inv + (wts[:, np.newaxis]*X).T.dot(X)/sigsq)
+  mup = np.dot(Sigp, np.dot(Sig0inv,np.ones(out_features)) + (wts[:, np.newaxis]*Y[:,np.newaxis]*X).sum(axis=0)/datastd**2)
+  return np.random.multivariate_normal(mup, Sigp, n)
+
 
 prj_w = bc.BlackBoxProjector(sampler_w, proj_dim, log_likelihood, grad_log_likelihood, nl=nl)
 prj_bw = bc.BetaBlackBoxProjector(sampler_w, proj_dim, beta_likelihood, log_likelihood, grad_beta, nl=nl)
@@ -121,9 +143,9 @@ print('Creating coreset construction objects')
 
 in_batches = True
 if in_batches:
-  sparsevi = bc.SparseVICoreset(Z, prj_w, opt_itrs=VI_opt_itrs, n_subsample_opt=n_subsample_opt, n_subsample_select=None,
+  sparsevi = bc.SparseVICoreset(Z, prj_w, opt_itrs=VI_opt_itrs, n_subsample_opt=n_subsample_opt, n_subsample_select=n_subsample_select,
                               step_sched=SVI_step_sched, wts=np.ones(init_size), idcs=1e7+np.arange(init_size), pts=Z_init, groups=groups, initialized=True, enforce_new=False)
-  bcoresvi = bc.BetaCoreset(Z, prj_bw, opt_itrs=VI_opt_itrs, n_subsample_opt=n_subsample_opt, n_subsample_select=None,
+  bcoresvi = bc.BetaCoreset(Z, prj_bw, opt_itrs=VI_opt_itrs, n_subsample_opt=n_subsample_opt, n_subsample_select=n_subsample_select,
                               step_sched=BCORES_step_sched, beta=beta, learn_beta=False, wts=np.ones(init_size), idcs=1e7+np.arange(init_size), pts=Z_init, groups=groups, initialized=True)
   unif = bc.UniformSamplingCoreset(Z, wts=np.ones(init_size), idcs=1e7+np.arange(init_size), pts=Z_init, groups=groups)
 else:
@@ -181,6 +203,7 @@ else:
         nl.optimize(torch.from_numpy(w[-1].astype(np.float32)), torch.from_numpy(p[-1].astype(np.float32)), weight_decay=weight_decay, initial_lr=initial_lr)
       test_nll, test_performance = nl.test(torch.from_numpy(Z_test[np.random.choice(Z_test.shape[0], tss, replace=False), :]))
       nlls[m], rmses[m] = test_nll, test_performance
+      muw, LSigw, LSigwInv = weighted_post(mu0, Sig0inv, datastd**2, deep_encoder(nl, pts), wts)
     else:
       w.append(np.array([0.]))
       p.append(np.zeros((1,Y.shape[0])))

@@ -74,6 +74,7 @@ class SparseVICoreset(Coreset):
           self.pts[-1] = self.data[f]
     else: # add new group to the coreset
       vecs, sum_scaling, sub_idcs, corevecs = self._get_projection(self.n_subsample_select, self.wts, self.pts, select=True)
+      print('\n\n vecs : ', vecs.shape, 'self.groups : ', len(self.groups), 'self.n_subsample_select, self.pts : ', self.n_subsample_select, self.pts.shape)
       groupvecs = np.asarray([vecs[idx,:].sum(axis=0) for idx in self.groups])
       #compute the residual error
       if self.n_subsample_select is None:

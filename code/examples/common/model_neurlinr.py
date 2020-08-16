@@ -22,6 +22,8 @@ def load_data(name, data_dir):
     return (X, Y)
   elif name in ['year']:
     data = np.genfromtxt('{}/{}.txt'.format(data_dir, name), delimiter=',')
+  elif name in ['prices2018']:
+    data = np.load('{}/{}.npy'.format(data_dir, name))
   else:
     raise ValueError('Unsupported dataset: {}'.format(data_dir, name))
   if name in ['boston']:
