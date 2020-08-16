@@ -13,17 +13,17 @@ def linearize():
   c = -1
   for beta in [0.2]:
     for tr in range(30): # trial number
-      for nm in ["BCORES", "RAND", "SVI"]: # coreset method
+      for nm in ["BCORES", "SVI"]: # coreset method
         for i0 in [.1]:
           for f_rate in [0, 30]:
-            for dnm in ["year"]: #, "prices2018"]:
+            for dnm in ["year"]: #["year"]: #, "prices2018"]:
               c += 1
               args_dict[c] = (tr, nm, dnm, f_rate, beta, i0)
   return args_dict
 
 mapping = linearize()
-#tr, algnm, dnm, f_rate, beta, i0 = mapping[int(sys.argv[1])]
-tr, algnm, dnm, f_rate, beta, i0 = mapping[0]
+tr, algnm, dnm, f_rate, beta, i0 = mapping[int(sys.argv[1])]
+#tr, algnm, dnm, f_rate, beta, i0 = mapping[0]
 
 # randomize datapoints order
 def unison_shuffled_copies(a, b):
@@ -52,7 +52,7 @@ if dnm=='boston':
   out_features = 20 # dimension of the ouput of the neural encoder used for lin reg
   weight_decay = 1.
   initial_lr = 1e-2
-  n_subsample_select = None
+  n_subsample_select = 3
 elif dnm=='year':
   init_size = 200
   batch_size = 100
@@ -91,13 +91,13 @@ Z_test = np.hstack((X_test, Y_test)).astype(np.float32)
 # Specify encoder and coreset hyperparameters
 nl = NeuralLinear(Z_init, out_features=out_features, input_mean=input_mean, input_std=input_std, output_mean=output_mean, output_std=output_std, seed=tr)
 train_nn_freq = 1 # frequency of nn training wrt coreset iterations
-VI_opt_itrs = 1000
-n_subsample_opt = 1000
+VI_opt_itrs = 500
+n_subsample_opt = 500
 proj_dim = 100
 SVI_step_sched = lambda i : i0/(1.+i)
 #BPSVI_step_sched = lambda m: lambda i : i0/(1.+i)
 BCORES_step_sched = lambda i : i0/(1.+i)
-M = 50 # max num of coreset iterations
+M = 20 # max num of coreset iterations
 
 mu0 = datamn*np.ones(out_features)
 ey = np.eye(out_features)
