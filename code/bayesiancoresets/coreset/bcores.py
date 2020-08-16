@@ -52,7 +52,7 @@ class BetaCoreset(Coreset):
       group_idcs_lst = [self.groups[i] for i in group_idcs]
       sub_idcs = flatten([self.groups[idx] for idx in group_idcs])
       vecs = np.array([np.sum(self.ll_projector.project_f(self.data[idcs,:], beta), axis=0) for idcs in group_idcs_lst])
-      sum_scaling = self.data.shape[0]/n_subsample      
+      sum_scaling = self.data.shape[0]/n_subsample
     # component of coreset (using beta-divergence)
     if self.pts.size > 0:
       corevecs = self.ll_projector.project_f(self.pts, beta)
@@ -141,7 +141,7 @@ class BetaCoreset(Coreset):
         return -corevecs.dot(resid) / corevecs.shape[1]
       x0 = self.wts
       self.wts = nn_opt(x0, grd, opt_itrs=self.opt_itrs, step_sched = self.step_sched)
-      
+
   def error(self):
     return 0. #TODO: implement KL estimate
 
