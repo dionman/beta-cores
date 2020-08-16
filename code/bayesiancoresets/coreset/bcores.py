@@ -52,7 +52,7 @@ class BetaCoreset(Coreset):
       group_idcs_lst = [self.groups[i] for i in group_idcs]
       sub_idcs = flatten([self.groups[idx] for idx in group_idcs])
       vecs = np.array([np.sum(self.ll_projector.project_f(self.data[idcs,:], beta), axis=0) for idcs in group_idcs_lst])
-      sum_scaling = self.data.shape[0]/n_subsample
+      sum_scaling = len(self.groups)/n_subsample
     # component of coreset (using beta-divergence)
     if self.pts.size > 0:
       corevecs = self.ll_projector.project_f(self.pts, beta)
@@ -85,11 +85,10 @@ class BetaCoreset(Coreset):
     else: # add new group to the coreset
       groupvecs, sum_scaling, sub_idcs, group_idcs, corevecs = self._get_projection(self.n_subsample_select, self.wts, self.pts, self.beta, select=True)
       #compute the residual error
-      #compute the residual error
       if self.n_subsample_select is None:
         resid = groupvecs.sum(axis=0) - self.wts.dot(corevecs)
       else:
-        resid = len(sub_idcs)/self.data.shape[0]*groupvecs.sum(axis=0) - self.wts.dot(corevecs)
+        resid = sum_scaling*groupvecs.sum(axis=0) - self.wts.dot(corevecs)
       #resid = sum_scaling*vecs.sum(axis=0) - self.wts.dot(corevecs)
       #compute the correlations for the new subsample
       corrs = groupvecs.dot(resid) / np.sqrt((groupvecs**2).sum(axis=1)) / groupvecs.shape[1] #up to a constant; good enough for argmax
@@ -104,16 +103,16 @@ class BetaCoreset(Coreset):
         if self.n_subsample_select is None:
           f = np.argmax(corrs)
         else:
-          #print('self.groups[group_idcs[np.argmax(corrs)]] : ', self.groups[group_idcs[np.argmax(corrs)]], group_idcs)
-          f = self.groups[group_idcs[np.argmax(corrs)]] if sub_idcs is not None else np.argmax(corrs)
+          f = group_idcs[np.argmax(corrs)] if sub_idcs is not None else np.argmax(corrs)
+        print('f and selected groups : ', np.array(f) not in self.selected_groups)
         if f not in self.selected_groups:
-          self.selected_groups.append(f)
-          newpoints = self.data[f,:]
+          self.selected_groups.append(np.array(f))
+          newpoints = self.data[self.groups[f],:]
           self.wts.resize(self.wts.shape[0]+newpoints.shape[0], refcheck=False)
           self.idcs.resize(self.idcs.shape[0]+newpoints.shape[0], refcheck=False)
           self.pts.resize((self.pts.shape[0]+newpoints.shape[0], self.data.shape[1]), refcheck=False)
           self.wts[-newpoints.shape[0]:] = [0.]*newpoints.shape[0]
-          self.idcs[-newpoints.shape[0]:] = f
+          self.idcs[-newpoints.shape[0]:] = self.groups[f]
           self.pts[-newpoints.shape[0]:,:] = newpoints
       print('idcs and pts shapes : ', self.idcs.shape, self.pts.shape)
     return
@@ -140,7 +139,9 @@ class BetaCoreset(Coreset):
         #output gradient of weights at idcs
         return -corevecs.dot(resid) / corevecs.shape[1]
       x0 = self.wts
+      print('optimizing')
       self.wts = nn_opt(x0, grd, opt_itrs=self.opt_itrs, step_sched = self.step_sched)
+      print('end of optimization')
 
   def error(self):
     return 0. #TODO: implement KL estimate

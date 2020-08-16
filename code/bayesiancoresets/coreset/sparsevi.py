@@ -42,14 +42,14 @@ class SparseVICoreset(Coreset):
       sum_scaling = 1.
     elif self.groups is None:
       sub_idcs = np.random.randint(self.data.shape[0], size=n_subsample)
-      vecs = self.ll_projector.project_f(self.data[sub_idcs], beta)
+      vecs = self.ll_projector.project(self.data[sub_idcs])
       sum_scaling = self.data.shape[0]/n_subsample
     elif self.groups:
       group_idcs = np.random.randint(len(self.groups), size=n_subsample)
       group_idcs_lst = [self.groups[i] for i in group_idcs]
       sub_idcs = flatten([self.groups[idx] for idx in group_idcs])
-      vecs = np.array([np.sum(self.ll_projector.project_f(self.data[idcs,:], beta), axis=0) for idcs in group_idcs_lst])
-      sum_scaling = self.data.shape[0]/n_subsample
+      vecs = np.array([np.sum(self.ll_projector.project(self.data[idcs,:]), axis=0) for idcs in group_idcs_lst])
+      sum_scaling = len(self.groups)/n_subsample
     if self.pts.size > 0:
       corevecs = self.ll_projector.project(p)
     else:
@@ -83,11 +83,11 @@ class SparseVICoreset(Coreset):
           self.idcs[-1] = f
           self.pts[-1] = self.data[f]
     else: # add new group to the coreset
-      groupvecs, sum_scaling, sub_idcs, group_idcs, corevecs = self._get_projection(self.n_subsample_select, self.wts, self.pts, self.beta, select=True)
+      groupvecs, sum_scaling, sub_idcs, group_idcs, corevecs = self._get_projection(self.n_subsample_select, self.wts, self.pts, select=True)
       if self.n_subsample_select is None:
         resid = groupvecs.sum(axis=0) - self.wts.dot(corevecs)
       else:
-        resid = len(sub_idcs)/self.data.shape[0]*groupvecs.sum(axis=0) - self.wts.dot(corevecs)
+        resid = sum_scaling*groupvecs.sum(axis=0) - self.wts.dot(corevecs)
       #resid = sum_scaling*vecs.sum(axis=0) - self.wts.dot(corevecs)
       #compute the correlations for the new subsample
       corrs = groupvecs.dot(resid) / np.sqrt((groupvecs**2).sum(axis=1)) / groupvecs.shape[1] #up to a constant; good enough for argmax
@@ -98,20 +98,20 @@ class SparseVICoreset(Coreset):
       else:
         maxcorecors = -np.inf
       #get the best selection; if it's an old coreset pt do nothing, if it's a new point expand and initialize storage for the new pt
+      print(corrs.max(), maxcorecors)
       if corecorrs.size == 0 or corrs.max() > maxcorecors:
         if self.n_subsample_select is None:
           f = np.argmax(corrs)
         else:
-          #print('self.groups[group_idcs[np.argmax(corrs)]] : ', self.groups[group_idcs[np.argmax(corrs)]], group_idcs)
-          f = self.groups[group_idcs[np.argmax(corrs)]] if sub_idcs is not None else np.argmax(corrs)
+          f = group_idcs[np.argmax(corrs)] if sub_idcs is not None else np.argmax(corrs)
         if f not in self.selected_groups:
           self.selected_groups.append(f)
-          newpoints = self.data[f,:]
+          newpoints = self.data[self.groups[f],:]
           self.wts.resize(self.wts.shape[0]+newpoints.shape[0], refcheck=False)
           self.idcs.resize(self.idcs.shape[0]+newpoints.shape[0], refcheck=False)
           self.pts.resize((self.pts.shape[0]+newpoints.shape[0], self.data.shape[1]), refcheck=False)
           self.wts[-newpoints.shape[0]:] = [0.]*newpoints.shape[0]
-          self.idcs[-newpoints.shape[0]:] = f
+          self.idcs[-newpoints.shape[0]:] = self.groups[f]
           self.pts[-newpoints.shape[0]:,:] = newpoints
       print('idcs and pts shapes : ', self.idcs.shape, self.pts.shape)
     return
