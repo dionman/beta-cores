@@ -1,4 +1,5 @@
 # ignore all heavy files
+*.pyc 
 *.npz
 *.xlsx
 *.csv

@@ -15,15 +15,15 @@ def linearize():
     for tr in range(10): # trial number
       for nm in ["BCORES", "SVI"]: # coreset method
         for i0 in [.1]:
-          for f_rate in [0, 30]:
-            for dnm in ["year"]: #["year"]: #, "prices2018"]:
+          for f_rate in [30, 0]:
+            for dnm in ["boston"]: #["year"]: #, "prices2018"]:
               c += 1
               args_dict[c] = (tr, nm, dnm, f_rate, beta, i0)
   return args_dict
 
 mapping = linearize()
-tr, algnm, dnm, f_rate, beta, i0 = mapping[int(sys.argv[1])]
-#tr, algnm, dnm, f_rate, beta, i0 = mapping[0]
+#tr, algnm, dnm, f_rate, beta, i0 = mapping[int(sys.argv[1])]
+tr, algnm, dnm, f_rate, beta, i0 = mapping[0]
 
 # randomize datapoints order
 def unison_shuffled_copies(a, b):
@@ -43,8 +43,8 @@ if dnm=='synthetic':
   N = 3000  # number of data points
   X, Y = build_synthetic_dataset(N)
 else:
-  #X, Y = load_data(dnm, data_dir='../data')
-  X, Y = load_data(dnm, data_dir='/home/dm754/rds/hpc-work/zellner_neural/data')
+  X, Y = load_data(dnm, data_dir='../data')
+  #X, Y = load_data(dnm, data_dir='/home/dm754/rds/hpc-work/zellner_neural/data')
   N = Y.shape[0]  # number of data points
 if dnm=='boston':
   init_size = 10
@@ -76,7 +76,8 @@ X_init, Y_init, X, Y, X_test, Y_test=(
          X[:init_size,:], Y[:init_size], X[init_size:-test_size,:],
          Y[init_size:-test_size], X[-test_size:,:], Y[-test_size:])
 X, Y, X_init, Y_init, X_test, Y_test, input_mean, input_std, output_mean, output_std = preprocessing(X, Y, X_init, Y_init, X_test, Y_test)
-
+print(X.shape)
+exit()
 #Specify priors
 #get empirical mean/std
 datastd = Y.std()
@@ -133,7 +134,6 @@ def sampler_w(n, wts, pts):
   Sigp = np.linalg.inv(Sig0inv + (wts[:, np.newaxis]*X).T.dot(X)/sigsq)
   mup = np.dot(Sigp, np.dot(Sig0inv,np.ones(out_features)) + (wts[:, np.newaxis]*Y[:,np.newaxis]*X).sum(axis=0)/datastd**2)
   return np.random.multivariate_normal(mup, Sigp, n)
-
 
 prj_w = bc.BlackBoxProjector(sampler_w, proj_dim, log_likelihood, grad_log_likelihood, nl=nl)
 prj_bw = bc.BetaBlackBoxProjector(sampler_w, proj_dim, beta_likelihood, log_likelihood, grad_beta, nl=nl)
