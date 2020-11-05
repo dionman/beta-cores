@@ -1,3 +1,12 @@
+"""
+The implementation of the neural linear model is for academic use only and is heavily based on the code
+authored by Robert Pinsler and Jonathan Gordon for the paper for the paper
+Robert Pinsler, Jonathan Gordon, Eric Nalisnick, José Miguel Hernández-Lobato,
+"Bayesian Batch Active Learning as Sparse Subset Approximation," Advances in Neural Information Processing Systems, 2019.
+According to the corresponding license, we acknowledge Cambridge and Samsung as the providers of this piece of Software.
+Full implementation can be found at https://github.com/rpinsler/active-bayesian-coresets
+"""
+
 import numpy as np
 import torch
 import torch.nn as nn
