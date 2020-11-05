@@ -4,4 +4,4 @@ D. Manousakas, C. Mascolo. "β-Cores: Robust Large-Scale Bayesian Data Summariza
 
 https://arxiv.org/abs/2008.13600
 
-Execute the ```run.sh``` within each of the examples/zellner_* folder to construct the coresets for the statistical models presented in the experiments section 
+Execute the ```run.sh``` within each of the ```examples/zellner_*``` folder to construct the coresets for the statistical models presented in the experiments section 
